@@ -104,12 +104,6 @@ typedef struct
 	CDV_INT08U *buf;
 }SCRIPT_INFO;
 extern SCRIPT_INFO g_scriptInfo;
-/*debug传递数据用结构体*/
-//typedef struct
-//{
-//	CDV_INT32U val;
-//}DEBUG_DATA;
-//extern DEBUG_DATA g_debugData;
 
 
 typedef struct 
@@ -134,6 +128,7 @@ void CmdArgDelete(CMD_ARG *arg);
 #define APP_ID 0xCD
 #define TOAPP_ID 0xAD
 #define ENABLE_FPGA_DOWN 1
+#define TCP_COM 0xEE
 /*定义CDV版本*/
 //#define CDV_V1 1
 #define CDV_V2_2
@@ -143,32 +138,11 @@ void CmdArgDelete(CMD_ARG *arg);
 
 //资源使用定义
 #define USE_NPC_NET  1
-/*LED定义*/
-//#if defined(CDV_V1)
-//#define LED1 PDout(9)	  // LED1 运行指示
-//#define LED2 PDout(11)	// LED2	告警指示
-//#define LED3 PDout(13)	// LED3 故障指示
-//#elif defined(CDV_V2)
-//#define LED1 PHout(12)	  // LED1 运行指示
-//#define LED2 PBout(12)	// LED2	告警指示
-//#define LED3 PHout(11)	// LED3 故障指示
-//#endif
 
 /*串口波特率*/
 #define USART_SEND_GAP  20
 #define USART1BOUND 115200
 /*内存地址定义*/
-//#define STARTSCRIP_NAME        0x051000//起始脚本名称存储地址
-//#define STARTSCRIP_NAME_LEN    0x050010//起始脚本名称长度地址
-//#define STARTSCRIPADDR       0x100000//起始脚本存储地址
-//#define LOGICLEN              0x04000
-//#define LOGICADDR(i)         0x300000 + LOGICLEN * (i)//脚本存储地址 64
-//#define SCROP_LOGIC          0x059000				          //逻辑脚本
-//#define REG_ADDR             0x010000				          //寄存器值存储地址
-//#define INREG_ADDR			     0x030000				          //只读寄存器值存储地址
-//#define COIL_ADDR			       0x040000				          //线圈值存储地址
-//#define INCOIL_ADDR			     0x045000				          //只读线圈值存储地址
-//#define WORKER_MAX_SCRIPT    0x10000
 
 #define SCRIP_LINE_LEN        0x500000//脚本长度5M
 //#define INILEN                0x10000       //INI长度，最长64KB
@@ -182,74 +156,30 @@ void CmdArgDelete(CMD_ARG *arg);
 
 
 #define WORKER_NUM           (SCRIP_MAX_RUN - 2)
-//#define SCRIP_NUM_RUN        0x050000                 //脚本运行数量
-//#define SCRIP_NUM_DEBUG      0x050005                   //脚本调试数量
-//#define SCRIP_NAME_LEN(i)    0x050010 + 0x00001 * (i) //脚本名称长度地址
-//#define SCRIP_LINE_NAME      0x050100                 //生产线名称
-//#define SCRIP_NAME(i)        0x051000 + 0x00100 * (i) //脚本名称存储地址
-//#define SCRIP_FORMULA        0x055000//保存当前使用的配方
-//#define SCRIPADDR(i)         0x100000 + SCRIPLEN * (i)//脚本存储地址 8 + 24
+
 #define SCRIP_LINE_ADDR      0x100000                 //新生产线脚本存储地址
 
-//#define INI_LEN_ADDR(i)      0x300000 + INILEN * (i)       //INI flash长度存储地址
-//#define INI_ADDR(i)          0x300000 + INILEN * (i) + 2   //INI flash存储地址
-
-//#define SCRIP_GONGGE		     0x600000                 //宫格脚本
-//#define SCRIP_TRAY           0x600100                 //料盘脚本
-//#define SCRIP_FRE            0x630000                 //变频器脚本
-//#define SCRIP_ALARM					 SCRIP_RES            		//报警信息脚本
-//#define FPGA_MOTOR           0x700000                 //FPGAmotor程序存储地址 长度340*1024
-//#define FPGA_IO              0x700000 + 0x80000//350*1024      //FPGAIO程序存储地址
-
-
 /*资源的参数保存*/
-//#define MOTOPAR_ADDR		      0x20000				          //电机参数存储地址
-//#define MOTO_LINE_PAR_ADDR		MOTOPAR_ADDR+1000				//直线插补参数存储地址
-//#define MOTO_ARC_PAR_ADDR		  MOTO_LINE_PAR_ADDR+1000	  //圆弧插补参数存储地址
-//#define IPAR_ADDR             0x1FF00                 //I参数存储地址
-//#define VAL_STADDR            0x1F000                 //变量值存放起始地址
-
-//#define DAC_PAR_ADDR		      MOTO_ARC_PAR_ADDR+1000	//DAC参数
-//#define ADC_PAR_ADDR		      DAC_PAR_ADDR+100	      //ADC参数
-
+#define USART_ADDR            0x1EF00                  //串口设置存储地址
+#define NET_ADDR              USART_ADDR - 0x100       //网络设置存储地址
 
 #define LOG_INF_ADDR          0x600000                  //log信息存储地址
 #include "cdv_include.h"    /*放文件头会导致定义不能用在别的h文件中*/
 
-//#define NEW08U(A,len) if((A)!=NULL) { free(A);(A)=NULL;} {(A) = (CDV_INT08U*)malloc(sizeof(CDV_INT08U)*(len));} if(NULL == (A)) {NewError();}
 #define NEWCH(A,len) NewMemory((void **)&(A) , (len))
 #define NEW08U(A,len) NewMemory((void **)&(A) , sizeof(CDV_INT08U)*(len))
 #define NEW16U(A,len) NewMemory((void **)&(A) , sizeof(CDV_INT16U)*(len))//if((A)!=NULL) { free(A);(A)=NULL;} {(A) = (CDV_INT16U*)malloc(sizeof(CDV_INT16U)*(len));} if(NULL == (A)) {NewError();}
 #define NEW32U(A,len) NewMemory((void **)&(A) , sizeof(CDV_INT32U)*(len))
-//#define NEW32U(A,len) if((A)!=NULL) { free(A);(A)=NULL;} {(A) = (CDV_INT32U*)malloc(sizeof(CDV_INT32U)*(len));} if(NULL == (A)) {NewError();}
-//#define NEW08UP(A,len) if((A)!=NULL) { free(A);(A)=NULL;} {(A) = (CDV_INT08U**)malloc(sizeof(CDV_INT08U*)*(len));} if(NULL == (A)) {NewError();}
-//#define NEW16UP(A,len) if((A)!=NULL) { free(A);(A)=NULL;} {(A) = (CDV_INT16U**)malloc(sizeof(CDV_INT16U*)*(len));} if(NULL == (A)) {NewError();}
-//#define NEW32UP(A,len) if((A)!=NULL) { free(A);(A)=NULL;} {(A) = (CDV_INT32U**)malloc(sizeof(CDV_INT32U*)*(len));} if(NULL == (A)) {NewError();}
-//#define DELETE(A) if((A)!=NULL) { free(A);(A)=NULL;}
+
 #define DELETE(A) DelMemory((void **)&(A))
 #define CLI() __set_PRIMASK(1) /*关闭所有中断NVIC_SystemReset();// 复位*/
 #define SEI() __set_PRIMASK(0)
 
 #define INIT_CLEAR(ARG) memset(&ARG, 0, sizeof(ARG))
+#define ONLY_ID_ADDR (u32*)(0x1FFF7A10)
 /*
  *CDV 资源定义
  */
-/*I*/
-//typedef struct
-//{	
-//	GPIO_TypeDef * port;//输出端口
-//	CDV_INT16U pin;//输出端口号
-//}CDV_IO;
-/*CDV资源全局变量，在CDVInit中初始化*/
-//#if defined(CDV_V1)
-//extern CDV_IO g_cdvI[16];
-//extern CDV_IO g_cdvO[16];
-//#elif defined(CDV_V2)
-//extern CDV_IO g_cdvI[20];
-//extern CDV_IO g_cdvO[20];
-//#endif
-
-//extern CDV_IO g_dipSW[6];
 
 #define  BIT_SET(val , bit)      ((val) |= (0x01 << (bit)))
 #define  BIT_RESET(val , bit)    ((val) &= ((~0x0) ^(0x01 << (bit))))
@@ -272,10 +202,6 @@ extern OS_TMR	  tmr3;		//定时器3
 #define USART_SEND_STK_SIZE 128  //128-256
 #define CDV_REFRESH_TASK_PRIO 5
 #define CDV_REFRESH_STK_SIZE 128
-#define WORKER_MANAGE_TASK_PRIO 5
-#define WORKER_MANAGE_STK_SIZE 512 //128-256//cmdparse嵌套比较深
-#define PARSE_TASK_PRIO 5
-#define PARSE_STK_SIZE 256         //128-256//cmdparse嵌套比较深
 
 
 /*任务控制块*/
@@ -287,30 +213,9 @@ extern OS_TCB WorkerManageTaskTCB;
 extern OS_TCB TaskParseTCB;
 
 /*信号量*/
-extern OS_SEM TX_SEM , MOTO_SEM , MEM_SEM , MSG_SEM; //定义一个信号量，用于访问共享资源, PROMPT_SEM  , CACHE_SEM , WIFI_SEM, VAL_SEM, SPI_SEM 
+extern OS_SEM TX_SEM , MOTO_SEM , MEM_SEM; //定义一个信号量，用于访问共享资源
 extern OS_SEM GENERAL_SERIAL_SEM;
 extern OS_SEM TCP_TX_SEM;
-
-
-//#define WORKER_RUN_NUM     g_workerRunNum
-//#define APP_SET_NUM        g_appSetNum
-//extern CDV_WORD g_workerRunNum;
-//extern CDV_WORD g_appSetNum;
-
-//#define SRP_NUM_RUN       g_numRun                         /*运行脚本数量*/
-//#define SRP_NUM_DEBUG     g_numDebug                       /*调试脚本数量*/
-//#define DBG_NO_GET        g_getNo                           /*获取的脚本号*/
-//extern CDV_WORD g_numRun;
-//extern CDV_WORD g_numDebug;
-//extern CDV_WORD g_getNo;
-
-
-
-extern double RPressureData[100];
-extern int RPressureCnt;
-
-
-
 
 #endif
 

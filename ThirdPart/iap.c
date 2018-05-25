@@ -68,7 +68,7 @@ uint8_t tab_1024[1024] =
   *
   * @note   g_scriptRecv
   */
-void IAP_RecvInit(CDV_INT32U addr , CDV_INT32U len) {
+void IAP_RecvInit(CDV_INT32U addr , CDV_INT32U len, CDV_INT08U port) {
 	CDV_INT08U i;
 	g_scriptRecv.doPos = 0;
 	//g_scriptRecv.no = 0;
@@ -78,6 +78,7 @@ void IAP_RecvInit(CDV_INT32U addr , CDV_INT32U len) {
 	g_scriptRecv.addr = addr;
 	g_scriptRecv.crc = 0xFFFF;
 	g_scriptRecv.err = 0;
+	g_scriptRecv.port = port;
 	
 	for (i = 0; i < QUE_NUM; i++) {
 		g_scriptRecv.buf[i] = UserMemPtr(CCM_RECV_BUF + i * QUE_LEN);
@@ -86,7 +87,7 @@ void IAP_RecvInit(CDV_INT32U addr , CDV_INT32U len) {
 	FLASH_If_Init();									//解锁 
   FLASH_DataCacheCmd(DISABLE);//FLASH擦除期间,必须禁止数据缓存
  		
-	g_scriptRecv.err = FLASH_If_Erase(addr);
+	g_scriptRecv.err = FLASH_If_Erase2(addr, FLASH_Sector_8);
 	
   g_cdvStat = CDV_RECV;
 }
@@ -110,8 +111,8 @@ void IAP_RecvDeinit(void) {
 	g_scriptRecv.tmpLen = 0;
 	g_scriptRecv.addr = 0;
 	g_scriptRecv.crc = 0;
+	g_scriptRecv.port = 0;
 	g_cdvStat = CDV_ONLINE;
-	
 	for (i = 0; i < QUE_NUM; i++) {
 		g_scriptRecv.buf[i] = NULL;
     g_scriptRecv.len[i] = 0;
@@ -151,13 +152,13 @@ u8 IAP_Flash_Write(u8* pBuffer,u32 WriteAddr,u16 NumByteToWrite)
   *
   * @note   g_scriptRecv
   */
-void IAP_RecvCtl(CDV_INT32U addr , CDV_INT32U len) {
+void IAP_RecvCtl(CDV_INT32U addr , CDV_INT32U len , CDV_INT08U port) {
 	CDV_INT08U start = 0 ;
 	CDV_INT32U cnt = 1 ;
 	CDV_INT32U lastRxPos = 0;
 	if(0 == addr || 0 == len)
 		return;
-	IAP_RecvInit(addr , len);
+	IAP_RecvInit(addr , len , port);
 	SerialPutString("\r\n接收初始化完成，准备接收");
 	while(!g_scriptRecv.err) {//检测是否用户开启了FPGA程序下载到flash的拨码开关
 	  if(g_scriptRecv.tmpLen + g_scriptRecv.len[g_scriptRecv.doPos] >=  g_scriptRecv.totalLen) {//拨码开关拨到了停止下载FPGA程序的位置			
@@ -206,9 +207,9 @@ void IAP_RecvCtl(CDV_INT32U addr , CDV_INT32U len) {
   * @param  None
   * @retval None
   */
-void SerialDownload(u32 fileSize)
+void SerialDownload(u32 fileSize, CDV_INT08U port)
 {
-  IAP_RecvCtl(APPLICATION_ADDRESS, fileSize);
+  IAP_RecvCtl(APPLICATION_ADDRESS, fileSize, port);
 }
 
 /**
@@ -291,7 +292,7 @@ void Main_Menu(u8 opt, u32 fileSize, u8 uartNo)
     if (opt == 0x31)
     {
       /* Download user application in the Flash */
-      SerialDownload(fileSize);
+      SerialDownload(fileSize, uartNo);
     }
     else if (opt == 0x32)
     {
@@ -301,12 +302,6 @@ void Main_Menu(u8 opt, u32 fileSize, u8 uartNo)
     else if (opt == 0x33) /* execute the new program */
     {
 			IAP_LoadApp(APPLICATION_ADDRESS);
-//      JumpAddress = *(__IO uint32_t*) (APPLICATION_ADDRESS + 4);
-//      /* Jump to user application */
-//      Jump_To_Application = (pFunction) JumpAddress;
-//      /* Initialize user application's Stack Pointer */
-//      __set_MSP(*(__IO uint32_t*) APPLICATION_ADDRESS);
-//      Jump_To_Application();
     }
     else if ((opt == 0x34) && (FlashProtection == 1))
     {
@@ -370,6 +365,63 @@ void Main_Menu(u8 opt, u32 fileSize, u8 uartNo)
 
 			SerialPutString("==========================================================\r\n\n");
 			}
+  }
+}
+
+/**
+  * @brief  Online update
+  * @param  None
+  * @retval None
+  */
+void CentralizedControl_Ctrl(uint8_t* buf, uint8_t len, uint8_t uartNo)
+{
+  uint8_t key = buf[0];
+  uint8_t opt = buf[1];
+  u32 fileSize = *(u32*)(buf + 2);
+  SerialNo = uartNo;
+
+  if (0xF3 == key)
+  {
+
+    if (opt == 0x0)/* answer */
+    {
+      
+      SerialPutString("OK\r\n");
+    }else if (opt == 0x1)/* Download user application in the Flash */
+    {
+      
+      SerialDownload(fileSize, uartNo);
+    }
+    else if (opt == 0x2)/* Upload user application from the Flash */
+    {
+      
+      SerialUpload();
+    }
+    else if (opt == 0x3) /* execute the new program */
+    {
+			IAP_LoadApp(APPLICATION_ADDRESS);
+    }
+    else if ((opt == 0x4) && (FlashProtection == 1))/* Disable the write protection */
+    {
+      
+      switch (FLASH_If_DisableWriteProtection())
+      {
+        case 1:
+        {
+          SerialPutString("Write Protection disabled...\r\n");
+          FlashProtection = 0;
+          break;
+        }
+        case 2:
+        {
+          SerialPutString("Error: Flash write unprotection failed...\r\n");
+          break;
+        }
+        default:
+        {
+        }
+      }
+    }
   }
 }
 /**

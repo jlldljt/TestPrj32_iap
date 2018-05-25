@@ -22,23 +22,7 @@ void Delay(__IO uint32_t nCount)
 }
 
 
-///*SPI读写
-//1.等待SPI TX空
-//2.发送数据
-//3.等待SPI TX空
-//4.等待SPI RX非空
-//5.延时
-//6.接收数据*/
-//CDV_INT08U FPGAoldx_ReadWriteByte(SPI_TypeDef* SPIx, CDV_INT08U TxData)
-//{
-//	uint16_t ret;
-//	while(SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_TXE)==RESET);
-//	SPI_I2S_SendData(SPIx,TxData);
-//  while(SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_TXE)==RESET);
-//	while(SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_RXNE)==RESET);
-//	ret = SPI_I2S_ReceiveData(SPIx);
-//	return ret;
-//}
+
 //读取SPI_FLASH的状态寄存器
 //BIT7  6   5   4   3   2   1   0
 //SPR   RV  TB BP2 BP1 BP0 WEL BUSY
@@ -95,25 +79,7 @@ u16 SPI_Flash_ReadID(void)
 	FLASH_DS;				    
 	return Temp;
 } 
-//读取SPI FLASH  
-//在指定地址开始读取指定长度的数据
-//pBuffer:数据存储区
-//ReadAddr:开始读取的地址(24bit)
-//NumByteToRead:要读取的字节数(最大65535)
-//void FPGA_Flash_Read(u8* pBuffer,u32 ReadAddr,u16 NumByteToRead)   
-//{ 
-// 	u16 i;    		
-//	FLASH_EN;                            //使能器件   
-//	FPGAFLASH_ReadWriteByte(W25X_ReadData);         //发送读取命令   
-//	FPGAFLASH_ReadWriteByte((u8)((ReadAddr)>>16));  //发送24bit地址    
-//	FPGAFLASH_ReadWriteByte((u8)((ReadAddr)>>8));   
-//	FPGAFLASH_ReadWriteByte((u8)ReadAddr);
-//	for(i=0;i<NumByteToRead;i++)
-//	{
-//		pBuffer[i]=FPGAFLASH_ReadWriteByte(0XFF);   //循环读数  
-//	}
-//	FLASH_DS;                            //取消片选     	      
-//}  
+
 //读取SPI FLASH  
 //在指定地址开始读取指定长度的数据
 //pBuffer:数据存储区
@@ -263,7 +229,59 @@ void SPI_Flash_Write(u8* pBuffer,u32 WriteAddr,u16 NumByteToWrite)
 	SPEED_FPGA;
 	OSSemPost (&MOTO_SEM,OS_OPT_POST_1,&err);
 }
+//写SPI FLASH  
+//在指定地址开始写入指定长度的数据
+//该函数带擦除操作!
+//pBuffer:数据存储区
+//WriteAddr:开始写入的地址(24bit)
+//NumByteToWrite:要写入的字节数(最大65535)  		   
+//PVD有用
+void Org_Flash_Write(u8* pBuffer,u32 WriteAddr,u16 NumByteToWrite)   
+{
+	u32 secpos;
+	u16 secoff;
+	u16 secremain;
+ 	u16 i;
+	u8* SPI_FLASH_BUF = UserMemPtr(CCM_FLASH_WRITE_BUF);//里面出错
 
+	SPEED_FLASH;
+	secpos=WriteAddr/4096;//扇区地址 0~511 for w25x64
+	secoff=WriteAddr%4096;//在扇区内的偏移
+	secremain=4096-secoff;//扇区剩余空间大小
+	if(NumByteToWrite<=secremain)secremain=NumByteToWrite;//不大于4096个字节
+	while(1)
+	{
+		Org_Flash_Read(SPI_FLASH_BUF,secpos*4096,4096);//读出整个扇区的内容
+		for(i=0;i<secremain;i++)//校验数据
+		{
+			if(SPI_FLASH_BUF[secoff+i]!=0XFF)break;//需要擦除
+		}
+		if(i<secremain)//需要擦除
+		{
+			SPI_Flash_Erase_Sector(secpos);//擦除这个扇区
+			for(i=0;i<secremain;i++)	   //复制
+			{
+				SPI_FLASH_BUF[i+secoff]=pBuffer[i];
+			}
+			SPI_Flash_Write_NoCheck(SPI_FLASH_BUF,secpos*4096,4096);//写入整个扇区
+
+		}else SPI_Flash_Write_NoCheck(pBuffer,WriteAddr,secremain);//写已经擦除了的,直接写入扇区剩余区间.		   
+		if(NumByteToWrite==secremain)break;//写入结束了
+		else//写入未结束
+		{
+			secpos++;//扇区地址增1
+			secoff=0;//偏移位置为0
+
+		  pBuffer+=secremain;  //指针偏移
+			WriteAddr+=secremain;//写地址偏移	   
+		  NumByteToWrite-=secremain;				//字节数递减
+			if(NumByteToWrite>4096)secremain=4096;	//下一个扇区还是写不完
+			else secremain=NumByteToWrite;			//下一个扇区可以写完了
+		}	 
+	};	 	 
+	//OSSemPost (&WORKER_SEM,OS_OPT_POST_1,&err);
+	SPEED_FPGA;
+}
 //擦除整个芯片
 //整片擦除时间:
 //W25X16:25s 
@@ -317,142 +335,118 @@ void SPI_Flash_WAKEUP(void)
     Delay(6);                              //等待TRES1
 }   
 
+//写SPI FLASH  
+//在指定地址开始写入指定长度的数据
+//该函数带擦除操作!
+//pBuffer:数据存储区
+//WriteAddr:开始写入的地址(24bit)
+//NumByteToWrite:要写入的字节数(最大65535)  		   
 
-
-//void FlashTR(u8* pBuffer,u32 WriteAddr,u16 NumByteToWrite, u8* pBuffer,u32 ReadAddr,u16 NumByteToRead)
-//{
-//	
-//	
-//}
-
-///** @brief  查询从机回复（不等待）
-//  * @param  pBuffer          查询到的字符串
-//	*         NumByteToRead    查询的长度
-//  * @retval 返回值说明
-//  * @note   请勿随意调用
-//  */
-//void Flash_Rx(CDV_INT08U* pBuffer, CDV_INT16U NumByteToRead)   
-//{ 
-// 	CDV_INT16U i;    		
-//  OS_ERR err;	
-//	
-//	ASSERT(pBuffer);
-//	
-//	FLASH_EN;                            //使能器件  
-//	
-//	for(i = 0; i < NumByteToRead; i++)
-//	{
-//			pBuffer[i] = FLASH_ReadWriteByte(0XFF);   //循环读数  
-//	}
-//	FLASH_DS;                            //取消片选   
-//}  
-///** @brief  主机发送命令
-//  * @param  pBuffer          发送的字符串
-//	*         NumByteToWrite   发送的字符串长度
-//  * @retval 返回值说明
-//  * @note   请勿随意调用
-//  */
-//void Flash_Tx(CDV_INT08U* pBuffer, CDV_INT16U NumByteToWrite)   
-//{
-// 	CDV_INT16U i;    		
-//  OS_ERR err;	
-//	
-//	ASSERT(pBuffer);
-//	
-//	FLASH_EN;                            //使能器件  
-//	for(i = 0 ; i < NumByteToWrite; i++)
-//	{
-//			/*temp[i] = */FLASH_ReadWriteByte(pBuffer[i]);   //循环读数  
-//	}
-//	FLASH_DS;                            //取消片选   
-//}
-
-///** @brief  主机发送接收接口，用于加入信号量
-//  * @param  pTxBuf          发送的字符串 NULL 不发送
-//	*         txByte          发送的字符串长度
-//  *         pRxBuf         查询成功保存从机回复的字符串
-//	*         rxLen          查询长度
-//  * @retval 返回值说明
-//  * @note   外部主级联封装发送命令必须使用该接口，或者与级联总线的其他设备资源易产生冲突
-//  */
-//void FlashTR(CDV_INT08U* pTxBuf, CDV_INT16U txByte, CDV_INT08U* pRxBuf, CDV_INT16U rxLen)   
-//{
-//  OS_ERR err;	
-
-//	FLASH_EN;
-//	
-//	if(pTxBuf && txByte) {
-//	  Flash_Tx(pTxBuf, txByte);
-//	}
-//	
-//	if(pRxBuf && rxLen) {
-//	  Flash_Rx(pRxBuf, rxLen);
-//	}
-//	
-//	FLASH_DS;
-
-//}
-
-///*************************************************************/
-//void FlashRead(u8* pBuffer,u32 ReadAddr,u16 NumByteToRead)   
-//{ 
-// 	u16 i;    		
-//  
-//	CDV_INT08U txBuf[4] = {W25X_ReadData, (u8)((ReadAddr)>>16), (u8)((ReadAddr)>>8), (u8)ReadAddr};
-//  
-//	FlashTR(txBuf, 4, pBuffer, NumByteToRead);
-////	FLASH_ReadWriteByte(W25X_ReadData);         //发送读取命令   
-////	FLASH_ReadWriteByte((u8)((ReadAddr)>>16));  //发送24bit地址    
-////	FLASH_ReadWriteByte((u8)((ReadAddr)>>8));   
-////	FLASH_ReadWriteByte((u8)ReadAddr);
-////	for(i=0;i<NumByteToRead;i++)
-////	{
-////			pBuffer[i]=FLASH_ReadWriteByte(0XFF);   //循环读数  
-////	}
-//	
-//}  
-
-//void FlashWrite(u8* pBuffer,u32 WriteAddr,u16 NumByteToWrite)   
-//{
-//	u32 secpos;
-//	u16 secoff;
-//	u16 secremain;
-// 	u16 i;
-//	
-//	secpos=WriteAddr/4096;//扇区地址 0~511 for w25x64
-//	secoff=WriteAddr%4096;//在扇区内的偏移
-//	secremain=4096-secoff;//扇区剩余空间大小
-//	if(NumByteToWrite<=secremain)secremain=NumByteToWrite;//不大于4096个字节
-//	while(1)
-//	{
-//		
-//		FlashRead(SPI_FLASH_BUF,secpos*4096,4096);//读出整个扇区的内容
+void SPI_Flash_Write_After_Erase(u8* pBuffer,u32 WriteAddr,u16 NumByteToWrite)   
+{ //u8 SPI_FLASH_BUF[4096];
+	u32 secpos;
+	u16 secoff;
+	u16 secremain;
+ 	u16 i;
+	u8* SPI_FLASH_BUF = UserMemPtr(CCM_FLASH_WRITE_BUF);//里面出错
+	OS_ERR err;
+	OSSemPend(&MOTO_SEM,0,OS_OPT_PEND_BLOCKING,0,&err); //请求信号量
+	SPEED_FLASH;
+	//OSSemPend(&WORKER_SEM , 0 , OS_OPT_PEND_BLOCKING , 0 , &err); //请求信号量
+	secpos=WriteAddr/4096;//扇区地址 0~511 for w25x64
+	secoff=WriteAddr%4096;//在扇区内的偏移
+	secremain=4096-secoff;//扇区剩余空间大小
+	if(NumByteToWrite<=secremain)secremain=NumByteToWrite;//不大于4096个字节
+	while(1)
+	{
+		//Org_Flash_Read(SPI_FLASH_BUF,secpos*4096,4096);//读出整个扇区的内容
 //		for(i=0;i<secremain;i++)//校验数据
 //		{
 //			if(SPI_FLASH_BUF[secoff+i]!=0XFF)break;//需要擦除
 //		}
 //		if(i<secremain)//需要擦除
 //		{
-//			SPI_Flash_Erase_Sector(secpos);//擦除这个扇区
+//			//SPI_Flash_Erase_Sector(secpos);//擦除这个扇区
 //			for(i=0;i<secremain;i++)	   //复制
 //			{
 //				SPI_FLASH_BUF[i+secoff]=pBuffer[i];
 //			}
 //			SPI_Flash_Write_NoCheck(SPI_FLASH_BUF,secpos*4096,4096);//写入整个扇区
 
-//		}else SPI_Flash_Write_NoCheck(pBuffer,WriteAddr,secremain);//写已经擦除了的,直接写入扇区剩余区间.		   
-//		if(NumByteToWrite==secremain)break;//写入结束了
-//		else//写入未结束
-//		{
-//			secpos++;//扇区地址增1
-//			secoff=0;//偏移位置为0
+//		}else 
+		SPI_Flash_Write_NoCheck(pBuffer,WriteAddr,secremain);//写已经擦除了的,直接写入扇区剩余区间.		   
+		if(NumByteToWrite==secremain)break;//写入结束了
+		else//写入未结束
+		{
+			secpos++;//扇区地址增1
+			secoff=0;//偏移位置为0
 
-//		  pBuffer+=secremain;  //指针偏移
-//			WriteAddr+=secremain;//写地址偏移	   
-//		  NumByteToWrite-=secremain;				//字节数递减
-//			if(NumByteToWrite>4096)secremain=4096;	//下一个扇区还是写不完
-//			else secremain=NumByteToWrite;			//下一个扇区可以写完了
-//		}	 
-//	};	 	 
-//	
-//}
+		  pBuffer+=secremain;  //指针偏移
+			WriteAddr+=secremain;//写地址偏移	   
+		  NumByteToWrite-=secremain;				//字节数递减
+			if(NumByteToWrite>4096)secremain=4096;	//下一个扇区还是写不完
+			else secremain=NumByteToWrite;			//下一个扇区可以写完了
+		}	 
+	};	 	 
+	//OSSemPost (&WORKER_SEM,OS_OPT_POST_1,&err);
+	SPEED_FPGA;
+	OSSemPost (&MOTO_SEM,OS_OPT_POST_1,&err);
+}
+
+//写SPI FLASH  
+//在指定地址开始写入指定长度的数据
+//该函数带擦除操作!
+//pBuffer:数据存储区
+//WriteAddr:开始写入的地址(24bit)
+//NumByteToWrite:要写入的字节数(最大65535)  		   
+
+void SPI_Flash_Erase(u32 EraseAddr,u32 NumByteToErase)   
+{ //u8 SPI_FLASH_BUF[4096];
+	u32 secpos;
+	u16 secoff;
+	u32 secremain;
+ 	u16 i;
+	//u8* SPI_FLASH_BUF = UserMemPtr(CCM_FLASH_WRITE_BUF);//里面出错
+	OS_ERR err;
+	OSSemPend(&MOTO_SEM,0,OS_OPT_PEND_BLOCKING,0,&err); //请求信号量
+	SPEED_FLASH;
+	//OSSemPend(&WORKER_SEM , 0 , OS_OPT_PEND_BLOCKING , 0 , &err); //请求信号量
+	secpos=EraseAddr/4096;//扇区地址 0~511 for w25x64
+	secoff=EraseAddr%4096;//在扇区内的偏移
+	secremain=4096-secoff;//扇区剩余空间大小
+	if(NumByteToErase<=secremain)secremain=NumByteToErase;//不大于4096个字节
+	while(1)
+	{
+	//	Org_Flash_Read(SPI_FLASH_BUF,secpos*4096,4096);//读出整个扇区的内容
+//		for(i=0;i<secremain;i++)//校验数据
+//		{
+//			if(SPI_FLASH_BUF[secoff+i]!=0XFF)break;//需要擦除
+//		}
+		if(1)//需要擦除
+		{
+			SPI_Flash_Erase_Sector(secpos);//擦除这个扇区
+//			for(i=0;i<secremain;i++)	   //复制
+//			{
+//				SPI_FLASH_BUF[i+secoff]=pBuffer[i];
+//			}
+//			SPI_Flash_Write_NoCheck(SPI_FLASH_BUF,secpos*4096,4096);//写入整个扇区
+
+		}
+		
+		if(NumByteToErase==secremain)break;//写入结束了
+		else//写入未结束
+		{
+			secpos++;//扇区地址增1
+			secoff=0;//偏移位置为0
+
+		  //pBuffer+=secremain;  //指针偏移
+			EraseAddr+=secremain;//写地址偏移	   
+		  NumByteToErase-=secremain;				//字节数递减
+			if(NumByteToErase>4096)secremain=4096;	//下一个扇区还是写不完
+			else secremain=NumByteToErase;			//下一个扇区可以写完了
+		}	 
+	};	 	 
+	//OSSemPost (&WORKER_SEM,OS_OPT_POST_1,&err);
+	SPEED_FPGA;
+	OSSemPost (&MOTO_SEM,OS_OPT_POST_1,&err);
+}

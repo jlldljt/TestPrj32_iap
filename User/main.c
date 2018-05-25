@@ -18,8 +18,6 @@
 
 #include "cdv_include.h"
 void tmr1_callback(void *p_tmr, void *p_arg); 	//定时器1回调函数，CDV串口
-//void tmr2_callback(void *p_tmr, void *p_arg);	//定时器2回调函数，wifi
-//void tmr3_callback(void *p_tmr, void *p_arg);	//定时器2回调函数，串口缓存
 
 CPU_STK START_TASK_STK[START_STK_SIZE];/*任务堆栈*/
 void start_task(void *p_arg);/*任务函数*/
@@ -32,15 +30,6 @@ void usart_send_task(void *p_arg);//任务函数
 
 CPU_STK FLOAT_TASK_STK[CDV_REFRESH_STK_SIZE];//任务堆栈
 void cdv_refresh_task(void *p_arg);//任务函数
-
-CPU_STK WORKER_MANAGE_TASK_STK[WORKER_MANAGE_STK_SIZE];//任务堆栈
-void worker_manage_task(void *p_arg);//任务函数
-//void worker_task(void *p_arg);//任务函数
-
-CPU_STK PARSE_TASK_STK[PARSE_STK_SIZE];//任务堆栈
-void parse_task(void *p_arg);//任务函数
-
-
 
 
 
@@ -66,7 +55,7 @@ int main(void){
 	
 	
 #if USE_NPC_NET
-/* configure Ethernet (GPIOs, clocks, MAC, DMA) */ 
+  /* configure Ethernet (GPIOs, clocks, MAC, DMA) */ 
   ETH_BSP_Config();
 
   /* Initilaize the LwIP stack */
@@ -138,10 +127,6 @@ void start_task(void *p_arg){
 								(CPU_CHAR* )"MEM_SEM", //信号量名字
 								(OS_SEM_CTR )1, //信号量值为 1
 								(OS_ERR* )&err);
-	OSSemCreate ((OS_SEM* )&MSG_SEM, //指向信号量
-								(CPU_CHAR* )"MSG_SEM", //信号量名字
-								(OS_SEM_CTR )1, //信号量值为 1
-								(OS_ERR* )&err);
 								
 	OSSemCreate ((OS_SEM* )&GENERAL_SERIAL_SEM, //指向信号量
 								(CPU_CHAR* )"GENERAL_SERIAL_SEM", //信号量名字
@@ -158,7 +143,7 @@ void start_task(void *p_arg){
 	OSTmrCreate((OS_TMR		*)&tmr1,		//定时器1
                 (CPU_CHAR	*)"tmr1",		//定时器名字
                 (OS_TICK	 )0,			//0*1=0ms
-                (OS_TICK	 )1,          //n*10ms=20ms 10ms=1/OS_CFG_TMR_TASK_RATE_HZ 
+                (OS_TICK	 )50,          //n*10ms=20ms 10ms=1/OS_CFG_TMR_TASK_RATE_HZ 
                 (OS_OPT		 )OS_OPT_TMR_PERIODIC, //周期模式
                 (OS_TMR_CALLBACK_PTR)tmr1_callback,//定时器1回调函数
                 (void	    *)0,			//参数为0
@@ -208,42 +193,15 @@ void start_task(void *p_arg){
 		(void* )0,
 		(OS_OPT )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
 		(OS_ERR* )&err);
-		//创建任务解析
-	OSTaskCreate((OS_TCB* )&TaskParseTCB,
-		(CPU_CHAR* )"task parse",
-		(OS_TASK_PTR )parse_task,
-		(void* )0,
-		(OS_PRIO )PARSE_TASK_PRIO,
-		(CPU_STK* )&PARSE_TASK_STK[0],
-		(CPU_STK_SIZE )PARSE_STK_SIZE/10,
-		(CPU_STK_SIZE )PARSE_STK_SIZE,
-		(OS_MSG_QTY )0,
-		(OS_TICK )0,
-		(void* )0,
-		(OS_OPT )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
-		(OS_ERR* )&err);
 		
-	//创建工人管理启动任务
-	OSTaskCreate((OS_TCB* )&WorkerManageTaskTCB,
-		(CPU_CHAR* )"worker manage task",
-		(OS_TASK_PTR )worker_manage_task,
-		(void* )0,
-		(OS_PRIO )WORKER_MANAGE_TASK_PRIO,
-		(CPU_STK* )&WORKER_MANAGE_TASK_STK[0],
-		(CPU_STK_SIZE )WORKER_MANAGE_STK_SIZE/10,
-		(CPU_STK_SIZE )WORKER_MANAGE_STK_SIZE,
-		(OS_MSG_QTY )0,
-		(OS_TICK )0,
-		(void* )0,
-		(OS_OPT )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
-		(OS_ERR* )&err);
-
-		Log_Write("START END" , LOG_EVENT);
+		//Log_Write("START END" , LOG_EVENT);
 		g_cdvStat = CDV_ONLINE;
 		LED3 = LED_OFF;
 		LED2 = LED_OFF;
 	 // OS_TaskSuspend((OS_TCB*)&StartTaskTCB,&err); //挂起开始任务
 	  OS_CRITICAL_EXIT(); //进入临界区		
+		
+		OSTmrStart(&tmr1,&err);
 		
 		OSTaskDel((OS_TCB*)0,&err); //删除 start_task 任务自身
 }
@@ -254,43 +212,43 @@ void start_task(void *p_arg){
 void usart_recv_task(void *p_arg){
 	OS_ERR err;
 	RET_STATUS ret = OPT_SUCCESS;
-	p_arg = p_arg;
-
+	CDV_INT32U tmp1 = 0, tmp2 = 0;
+	u32 clk;
+	p_arg = p_arg; 
 	while(1)	{
-		u32 clk, clk2;
-		if(g_uartRx.QUEUE.rxLen[g_uartRx.rxPos])//判断当前缓存是否为0
+		if(USART_RX_LEN)//判断当前缓存是否为0
 		{
-			clk = CalcCount(ReadClock1ms(), tm1Re);
-			if(clk > 2)//超过5ms，认为一条命令结束
-				USART_RX_QUEUE_SELF_ADD;
+			if(tmp1 != tm1Re)
+			{
+				tmp1 = tm1Re;
+				clk = 0;
+			}
+			else
+			{
+				if(CalcCount(ReadClock1ms(), tmp1) > 2)//超过2ms，认为一条命令结束
+					if(++clk > 1)
+					  USART_RX_QUEUE_SELF_ADD;
+			}
 		}
-		
 		
 		//有命令，进行初解析
-		if(USART_RX_HAD) 
-		{
-				ret = RecvParse(g_uartRx.QUEUE.rxBuf[g_uartRx.doPos],g_uartRx.QUEUE.rxLen[g_uartRx.doPos], MAIN_COM);
-				USART_RX_QUEUE_DO_NEXT;                                    /*转移到接收队列的下一条*/
-		}
-		else if(HAVE_ONLINE_CMD)
-		{
-			ret = RecvParse(g_olCache.buf, g_olCache.len, g_olCache.uart);
+		if(USART_RX_HAD) {
+			if(OPT_SUCCESS == RecvParse(g_uartRx.QUEUE.rxBuf[g_uartRx.doPos],g_uartRx.QUEUE.rxLen[g_uartRx.doPos], MAIN_COM))	{
+				 USART_RX_QUEUE_DO_NEXT;                                    /*转移到接收队列的下一条*/
+			}
+		} else if (HAVE_ONLINE_CMD) {
+			RecvParse(g_olCache.buf,g_olCache.len, g_olCache.uart);
 			ClearOnlineCmdCache();
 		}
 		
+		
 		if (USART_TX_HAD)//如果有命令要发送，启动发送线程
   		OSTaskResume((OS_TCB*)&UsartSendTaskTCB,&err);
+		
+		TaskSched();
 	}
 }
 
-void parse_task(void *p_arg)
-{
-	OS_ERR err;
-	while(0) 
-	{
-		
-	}
-}
 /*usart发送任务函数*/
 void usart_send_task(void *p_arg){
 	OS_ERR err;
@@ -304,6 +262,8 @@ void usart_send_task(void *p_arg){
 		else {
 			OS_TaskSuspend((OS_TCB*)&UsartSendTaskTCB,&err);               
 		}
+		
+		TaskSched();
 	}
 }
 
@@ -330,39 +290,17 @@ void cdv_refresh_task(void *p_arg){
 	}
 }
 
-/*工人管理任务*/
-CDV_INT16U ctrlNo = 1;
-void worker_manage_task(void *p_arg){
-
-	u8 len = 3;
-	u8 buf[3] = {0x01, 0x02, 0x03	};
-	while (1) {
-		if (ctrlNo) {
-
-			ctrlNo = 0;
-
-		}
-#if USE_NPC_NET
-  Eth_Link_query();
-#endif
-	}
-}
-
-
-
-
-
 //定时器1的回调函数
 //用于联机状态下的串口收
-void tmr1_callback(void *p_tmr, void *p_arg){
-  OS_ERR err;
-	if(++tm1Re < 2)
-		return;
-	
-	USART_RX_QUEUE_SELF_ADD;
-	if(USART_RX_HAD) {
-		OSTaskResume((OS_TCB*)&UsartRecvTaskTCB,&err);
-	}
+void tmr1_callback(void *p_tmr, void *p_arg) {
+		
+#if _NPC_VERSION_ > 1u
+#if USE_NPC_NET
+  Eth_Link_query();
+//#else
+//	OS_TaskSuspend((OS_TCB*)&WorkerManageTaskTCB,&err);
+#endif
+#endif
 }
 
 

@@ -77,6 +77,33 @@ uint32_t FLASH_If_Erase(uint32_t StartSector)
 }
 
 /**
+  * @brief  This function does an erase of all user flash area
+  * @param  StartSector: start of user flash area
+  * @retval 0: user flash area successfully erased
+  *         1: error occurred
+  */
+uint32_t FLASH_If_Erase2(uint32_t StartSector,uint32_t EndSector)
+{
+  uint32_t UserStartSector = FLASH_Sector_1, i = 0;
+
+  /* Get the sector where start the user flash area */
+  UserStartSector = GetSector(StartSector);
+
+  for(i = UserStartSector; i <= EndSector; i += 8)
+  {
+    /* Device voltage range supposed to be [2.7V to 3.6V], the operation will
+       be done by word */ 
+    if (FLASH_EraseSector(i, VoltageRange_3) != FLASH_COMPLETE)
+    {
+      /* Error occurred while page erase */
+      return (1);
+    }
+  }
+  
+  return (0);
+}
+
+/**
   * @brief  This function writes a data buffer in flash (data are 32-bit aligned).
   * @note   After writing data buffer, the flash content is checked.
   * @param  FlashAddress: start address for writing data buffer

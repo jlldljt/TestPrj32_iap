@@ -143,8 +143,7 @@ void USARTTR(u8 *txbuf,u16 txlen ,u8* rxbuf ,u8 rxbufLen,u8* rxlen ,u8 no) {
 	p_UartTR[no-1](txbuf, txlen , rxbuf , rxbufLen, rxlen);
 }
 /*统一中断处理*/
-void USARTx_IRQHandler(USART_TypeDef* USARTx)
-{
+void USARTx_IRQHandler(USART_TypeDef* USARTx) {
 	CDV_INT08U Res;
   //tm1Re = 0;
 	tm1Re = ReadClock1ms();
@@ -154,9 +153,11 @@ void USARTx_IRQHandler(USART_TypeDef* USARTx)
 		Res =USART_ReceiveData(USARTx);                       /*(USARTx->DR);	//读取接收到的数据*/
 		switch(g_cdvStat){
 			case CDV_RECV:
-				g_scriptRecv.buf[g_scriptRecv.rxPos][g_scriptRecv.len[g_scriptRecv.rxPos]++] = Res;//保存到队列
-			  if (QUE_LEN <=  g_scriptRecv.len[g_scriptRecv.rxPos])
-					MAX_SELF_ADD(g_scriptRecv.rxPos, QUE_NUM);
+				if (MAIN_COM == g_scriptRecv.port) {
+					g_scriptRecv.buf[g_scriptRecv.rxPos][g_scriptRecv.len[g_scriptRecv.rxPos]++] = Res;//保存到队列
+					if (QUE_LEN <=  g_scriptRecv.len[g_scriptRecv.rxPos])
+						MAX_SELF_ADD(g_scriptRecv.rxPos, QUE_NUM);
+				}
 				break;
 			default:
 				USART_RX_BUF_ADD_CHAR(Res);

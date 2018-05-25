@@ -151,10 +151,7 @@ IO_VAL IRead(CDV_INT32U no);
 //IO_VAL ORead(CDV_INT32U no);
 void OWrite(CDV_INT32U no , IO_VAL ioVal);
 void ExIOInit(void);
-//IO_VAL DIPRead(CDV_INT08U no);
-//IO_VAL ExIRead(CDV_INT08U no);
-//IO_VAL ExORead(CDV_INT08U no);
-//void ExOWrite(CDV_INT08U no , IO_VAL val);
+void LED_Init(void);
 u32 Read_Input_All(void);
 u32 Read_Output_ALL(void);
 #define I_PAR_NUM 2 //所有参数的字节长度

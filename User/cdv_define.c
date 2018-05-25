@@ -36,24 +36,12 @@ OS_TCB StartTaskTCB;
 OS_TCB UsartRecvTaskTCB;
 OS_TCB UsartSendTaskTCB;
 OS_TCB CdvRefreshTaskTCB;
-OS_TCB CdvRefreshTaskTCB;
-OS_TCB CdvValveTaskTCB;
-OS_TCB WorkerManageTaskTCB;
-OS_TCB TaskParseTCB;
 
 //CDV_INT08U g_whichUart; //指示串口线程中当前命令是从哪个串口发过来的
 /**/
-OS_SEM TX_SEM, MOTO_SEM,MEM_SEM , MSG_SEM;//, PROMPT_SEM  , CACHE_SEM , WIFI_SEM, VAL_SEM, SPI_SEM 
+OS_SEM TX_SEM, MOTO_SEM,MEM_SEM;
 OS_SEM GENERAL_SERIAL_SEM;
 OS_SEM TCP_TX_SEM;
-
-//CDV_WORD g_workerRunNum = 0;
-//CDV_WORD g_appSetNum = 0;
-
-//CDV_WORD g_numRun = 0;
-//CDV_WORD g_numDebug = 0;
-//CDV_WORD g_getNo = 0;
-	
 
 	//TEST
 double RPressureData[100] = {0};

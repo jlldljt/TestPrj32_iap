@@ -550,3 +550,51 @@ void OWrite(CDV_INT32U no , IO_VAL ioVal) {
 		GPIO_WriteBit(g_cdvO[no].port , g_cdvO[no].pin, val);
 	}
 }
+/** @brief  LED初始化
+  * @param 
+  * @retval 
+  * @note   
+  */
+void LED_Init(void)
+{    	 
+	
+#if _NPC_VERSION_ == 2u
+  GPIO_InitTypeDef  GPIO_InitStructure;
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOH|RCC_AHB1Periph_GPIOB|RCC_AHB1Periph_GPIOD|RCC_AHB1Periph_GPIOG, ENABLE);//使能GPIOF时钟
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 ;          //调试指示灯对应IO口
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;       //普通输出模式
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;      //推挽输出
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;  //100MHz
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;        //上拉
+  GPIO_Init(GPIOB, &GPIO_InitStructure);              //初始化H
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10| GPIO_Pin_11|GPIO_Pin_12|GPIO_Pin_13;    //led2|LED状态指示灯配置
+	GPIO_Init(GPIOD, &GPIO_InitStructure);                                             //初始化D
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4|GPIO_Pin_11|GPIO_Pin_12;                  //RUN|LED状态指示灯配置
+	GPIO_Init(GPIOG, &GPIO_InitStructure);                                             //初始化G
+
+#elif _NPC_VERSION_ == 3u
+	GPIO_InitTypeDef  GPIO_InitStructure;
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOH|RCC_AHB1Periph_GPIOB|RCC_AHB1Periph_GPIOI|RCC_AHB1Periph_GPIOG, ENABLE);//使能GPIOF时钟
+  
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;       //普通输出模式
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;      //推挽输出
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;  //100MHz
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;        //上拉
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 ;          //调试指示灯对应IO口
+  GPIO_Init(GPIOB, &GPIO_InitStructure);              //初始化H
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9| GPIO_Pin_10| GPIO_Pin_11;    //led2|LED状态指示灯配置
+	GPIO_Init(GPIOH, &GPIO_InitStructure);                                             //初始化D
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4|GPIO_Pin_5|GPIO_Pin_6;                  //RUN|LED状态指示灯配置
+	GPIO_Init(GPIOI, &GPIO_InitStructure);    
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6|GPIO_Pin_7;                  //RUN|LED状态指示灯配置
+	GPIO_Init(GPIOG, &GPIO_InitStructure); 
+#endif
+
+}		

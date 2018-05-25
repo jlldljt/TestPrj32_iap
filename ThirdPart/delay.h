@@ -21,8 +21,12 @@
 void delay_init(u8 SYSCLK);
 void delay_ms(u16 nms);
 void delay_us(u32 nus);
+void TaskSched(void);
+void TaskSched1(void);
 #define CDV_TIME_NUM 20
 
+extern u32 cdvTimeTick;
+#define GET_TICK cdvTimeTick
 #ifdef CDV_TIME_NUM
 //u32 GetCdvTimeTick(void);
 //void SetCdvTimeTick(u32 timeTick);
@@ -31,6 +35,8 @@ void StartCdvTime(u8 no);
 u32 GetCdvTimeTick(void);
 u32 EndCdvTime(u8 no);
 void DelayTick(u32 num);
+void DelayMS(u32 num);
+u32 CalcCount(u32 endCount , u32 startCount);
 //extern u32 Sys_time_1ms;	//系统计时1ms自增
 //extern u32 Sys_time_50ms;	//系统计时1s自增
 extern u8 ValveAdjust_Flag;

@@ -19,8 +19,8 @@
 //修改信息
 //无
 ////////////////////////////////////////////////////////////////////////////////// 	   
- 
-
+ #include "tcp.h"
+u8_t closeTcp = 0;
 //u8 tcp_server_recvbuf[TCP_SERVER_RX_BUFSIZE];	//TCP客户端接收数据缓冲区
 u8* tcp_server_recvbuf = NULL;	//TCP客户端接收数据缓冲区
 
@@ -54,13 +54,31 @@ void EthInfoSend(CDV_INT08U uartNo) {
 	CDV_INT08U i , no;
 	char tmp[50]={0};
 	
+	sprintf(tmp , "本机ip:%d.%d.%d.%d\r\n" 
+		,lwipdev.ip[0]
+		,lwipdev.ip[1]
+		,lwipdev.ip[2]
+		,lwipdev.ip[3]
+		);
+		AddTxNoCrc((CDV_INT08U*)tmp, strlen(tmp), uartNo);
+	
+	sprintf(tmp , "本机mac:%02x.%02x.%02x.%02x.%02x.%02x\r\n" 
+		,lwipdev.mac[0]
+		,lwipdev.mac[1]
+		,lwipdev.mac[2]
+		,lwipdev.mac[3]
+		,lwipdev.mac[4]
+		,lwipdev.mac[5]
+		);
+		AddTxNoCrc((CDV_INT08U*)tmp, strlen(tmp), uartNo);
+	
   if(gConn)
 	{
 		ip_addr_t addr;
 		u16_t port;
 		
 		netconn_getaddr(gConn, &addr, &port, 0);
-		sprintf(tmp , "%d.%d.%d.%d:%d\r\n" 
+		sprintf(tmp , "远程ip:%d.%d.%d.%d:%d\r\n" 
 		,(addr.addr)&0xff,(addr.addr>>8)&0xff,(addr.addr>>16)&0xff,(addr.addr>>24)&0xff,port
 		);
 	}
@@ -80,6 +98,7 @@ void EthInfoSend(CDV_INT08U uartNo) {
   * @param conn: pointer on connection structure 
   * @retval None
   */
+  int lenlenlen;
 void http_server_serve(struct netconn *conn) 
 {
 	//CPU_SR_ALLOC();
@@ -91,15 +110,15 @@ void http_server_serve(struct netconn *conn)
   char* buf;
   u16_t buflen;
   struct fs_file * file;
-  
-	//conn->recv_timeout = 1;  	//禁止阻塞线程 等待1ms
+	conn->recv_timeout = 1000;  	//禁止阻塞线程 等待1000ms
+	conn->send_timeout = 10;  	//禁止阻塞线程 等待10ms
 	
 	gConn = conn;
 	tcp_server_recvbuf = UserMemPtr(CCM_TCP_SERVER);
 	
   /* Read the data from the port, blocking if nothing yet there. 
    We assume the request (the part we care about) is in one netbuf */
-	while(1)
+	while(isLinkUp)
 	{
 //		//处理发送
 //		if((tcp_server_flag & LWIP_SEND_DATA) == LWIP_SEND_DATA) //有数据要发送
@@ -111,7 +130,11 @@ void http_server_serve(struct netconn *conn)
 //			}
 //			
 //		}
-		
+		while(closeTcp) {
+			//closeTcp = 0;
+			//break;
+			;
+		}
 		
 		//处理接收
 		recv_err = netconn_recv(conn, &inbuf);
@@ -123,6 +146,23 @@ void http_server_serve(struct netconn *conn)
 				netbuf_data(inbuf, (void**)&buf, &buflen);
 				
 				//////////////
+				if (g_cdvStat == CDV_RECV&&TCP_COM == g_scriptRecv.port) {
+					for(q=inbuf->p;q!=NULL;q=q->next)  //遍历完整个pbuf链表
+					{
+						lenlenlen += q->len;
+						if (QUE_LEN <= g_scriptRecv.len[g_scriptRecv.rxPos] + q->len)
+						{
+							while(SRP_QUE_HAD);
+//							if(SRP_QUE_HAD)
+//								goto TCP_SERVER_DELETE;
+							MAX_SELF_ADD(g_scriptRecv.rxPos, QUE_NUM);
+							
+						}
+						memcpy(&g_scriptRecv.buf[g_scriptRecv.rxPos][g_scriptRecv.len[g_scriptRecv.rxPos]], q->payload, q->len);
+						g_scriptRecv.len[g_scriptRecv.rxPos] += q->len;
+						
+					}
+				} else {
 				//OS_CRITICAL_ENTER(); //关中断
 					memset(tcp_server_recvbuf,0,TCP_SERVER_RX_BUFSIZE);  //数据接收缓冲区清零
 					for(q=inbuf->p;q!=NULL;q=q->next)  //遍历完整个pbuf链表
@@ -138,6 +178,7 @@ void http_server_serve(struct netconn *conn)
 							break; //超出TCP客户端接收数组,跳出	
 					}
 					//OS_CRITICAL_EXIT();  //开中断
+				}
 				//////////////
 				
 //				if (QUE_LEN <=buflen)
@@ -145,38 +186,55 @@ void http_server_serve(struct netconn *conn)
 				
 				switch(g_cdvStat){
 					case CDV_RECV:
-						if (QUE_LEN <= g_scriptRecv.len[g_scriptRecv.rxPos] + data_len)
-						{
-							while(SRP_QUE_HAD);
-							  MAX_SELF_ADD(g_scriptRecv.rxPos, QUE_NUM);
-						}
-						memcpy(&g_scriptRecv.buf[g_scriptRecv.rxPos][g_scriptRecv.len[g_scriptRecv.rxPos]], tcp_server_recvbuf, data_len);
-						g_scriptRecv.len[g_scriptRecv.rxPos] += data_len;
+//						if (TCP_COM == g_scriptRecv.port) {
+//							if (QUE_LEN <= g_scriptRecv.len[g_scriptRecv.rxPos] + data_len)
+//							{
+//								//while(SRP_QUE_HAD);
+//									MAX_SELF_ADD(g_scriptRecv.rxPos, QUE_NUM);
+//							}
+//							memcpy(&g_scriptRecv.buf[g_scriptRecv.rxPos][g_scriptRecv.len[g_scriptRecv.rxPos]], tcp_server_recvbuf, data_len);
+//							g_scriptRecv.len[g_scriptRecv.rxPos] += data_len;
+//							lenlenlen += data_len;
+//						}
 						break;
 					default:
-//						{
-//							CDV_INT16U crc;
-//							//OS_CRITICAL_ENTER(); //关中断
-//							//OS_CRITICAL_EXIT();  //开中断
-//							crc = getCRC16((u8*)tcp_server_recvbuf,data_len-2); 
-//							
-//							if((tcp_server_recvbuf[data_len-1] == ((crc >> 8) & 0xff))&&(tcp_server_recvbuf[data_len-2] == (crc & 0xff))){//crc chk
-//								if(0 == OnlineCmdCache((u8*)tcp_server_recvbuf , data_len-2, 0xEE)) {
-//									;
-//								}
-//							}
-//						}
-						OnlineCmdCache((u8*)tcp_server_recvbuf , data_len, 0xEE);
+						{
+							lenlenlen= 0;
+							//CDV_INT16U crc;
+							//crc = getCRC16((u8*)tcp_server_recvbuf,data_len-2); 
+							
+							//if((tcp_server_recvbuf[data_len-1] == ((crc >> 8) & 0xff))&&(tcp_server_recvbuf[data_len-2] == (crc & 0xff))){//crc chk
+							if(0 == OnlineCmdCache((u8*)tcp_server_recvbuf , data_len, TCP_COM)) {
+								;
+							}
+							//}
+						}
+						//	RecvParse(tcp_server_recvbuf,data_len, TCP_COM);
 						break;
 				}
 				data_len = 0;
 			}
 		}
+		else if(recv_err == ERR_TIMEOUT)
+		{
+			static int enable = 0;
+			if(enable && OPT_FAILURE == TCP_ServerSend("alive", 5))
+			{
+				break;
+			}
+		}
 		else/* if(recv_err == ERR_CLSD) */ //关闭连接
 		{
+			switch(g_cdvStat){
+				case CDV_RECV:
+					if(g_scriptRecv.tmpLen == 0 && TCP_COM == g_olCache.uart)
+						g_scriptRecv.len[g_scriptRecv.rxPos] += 1;
+					
+					break;
+			}
 			break;
 		}
-		
+TCP_SERVER_DELETE:
 		  /* Delete the buffer (netconn_recv gives us ownership,
    so we have to make sure to deallocate the buffer) */
   netbuf_delete(inbuf);
@@ -207,8 +265,11 @@ static void netconn_server_thread(void *arg)
 //    /* Bind to port 80 (HTTP) with default IP address */
 //    err = netconn_bind(conn, NULL, 80);
 		/* Bind to port 80 (HTTP) with default IP address */
-    err = netconn_bind(conn, NULL, 60000);
-    
+		u16 port;
+		SPI_Flash_Read((CDV_INT08U *)&port, NET_ADDR + 4, sizeof(port));
+    err = netconn_bind(conn, NULL, port);
+    conn->pcb.tcp->so_options |= SOF_KEEPALIVE;
+		
     if (err == ERR_OK)
     {
       /* Put the connection into LISTEN state */
@@ -394,6 +455,44 @@ RET_STATUS TCP_ServerSend(CDV_INT08U* pBuffer, CDV_INT16U NumByteToWrite){
   if(gConn)
 	err = netconn_write(gConn , pBuffer, NumByteToWrite/*strlen((char*)tcp_server_sendbuf)*/, NETCONN_COPY); //发送tcp_server_sendbuf中的数据
   
+	if (err != ERR_OK) {
+		if (err != ERR_TIMEOUT) {
+			ret = OPT_TCP_ERROR;
+		}else {
+		  ret = OPT_FAILURE;
+		}
+	}
+	///////////////////////////////////
+	OSSemPost (&TCP_TX_SEM,OS_OPT_POST_1,&os_err);
+	return ret;
+}
+
+/** @brief  发送命令
+  * @param  
+  * @retval 
+  * @note   写入发送缓存，具体发送在tcp_server_thread里
+  *         缓存中的第一个字节为后面的命令长度
+  */
+RET_STATUS TCP_ServerSendEx(CDV_INT08U* pBuffer, CDV_INT16U NumByteToWrite, CDV_INT08U* exBuf, CDV_INT16U exLen){  
+	err_t err;
+	OS_ERR os_err;
+	CDV_INT08U *sendBuf = NULL;
+	CDV_INT16U sendLen = NumByteToWrite + exLen;
+  //判断上一次命令是否发送完成
+	RET_STATUS ret = OPT_SUCCESS;
+  OSSemPend(&TCP_TX_SEM , 2 , OS_OPT_PEND_BLOCKING , 0 , &os_err); //请求信号量
+	NEW08U(sendBuf, sendLen);
+	memcpy(sendBuf, pBuffer, NumByteToWrite);
+	memcpy(sendBuf + NumByteToWrite, exBuf, exLen);
+	//下面顺序不要改动
+//	tcp_server_sendlen = NumByteToWrite;
+	/////////////////////////////
+	//err = netconn_write(gConn , tcp_server_sendbuf, tcp_server_sendlen/*strlen((char*)tcp_server_sendbuf)*/, NETCONN_COPY); //发送tcp_server_sendbuf中的数据
+  if(gConn)
+	  err = netconn_write(gConn , sendBuf, sendLen/*strlen((char*)tcp_server_sendbuf)*/, NETCONN_COPY); //发送tcp_server_sendbuf中的数据
+	
+  DELETE(sendBuf);
+	
 	if (err != ERR_OK)
 		ret = OPT_FAILURE;
 	///////////////////////////////////

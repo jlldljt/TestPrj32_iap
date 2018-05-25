@@ -68,6 +68,7 @@ void FpgaRecvCtl(void);
 //g_uartRx.QUEUE.rxLen[g_uartRx.doPos]=0;
 #define USART_RX_DO_ADDR g_uartRx.QUEUE.rxBuf[g_uartRx.doPos]
 #define USART_RX_DO_LEN g_uartRx.QUEUE.rxLen[g_uartRx.doPos]
+#define USART_RX_LEN g_uartRx.QUEUE.rxLen[g_uartRx.rxPos]
 typedef struct{
 	struct{
 	  CDV_INT08U rxBuf[USART_RX_QUEUE_LENGTH][USART_RX_BUF_LENGTH];         /*接收队列*/
@@ -125,6 +126,7 @@ typedef struct
 	CDV_INT08U *buf[QUE_NUM];
 	CDV_INT16U crc;
 	CDV_INT08U err;
+	CDV_INT08U port;
 }SCRIPT_RECV_QUE;
 
 extern SCRIPT_RECV_QUE g_scriptRecv;
@@ -169,9 +171,9 @@ CDV_INT08U RequestCmp(void);
 CDV_INT08U NeedRequestTx(CDV_INT08U uartNo);
 void AddTxNoCrc(CDV_INT08U* txBuf, CDV_INT16U txLen, CDV_INT08U uartNo);
 void AddTx(CDV_INT08U* txBuf, CDV_INT08U txLen, CDV_INT08U uartNo);
-void ScriptRecvInit(CDV_INT32U addr , CDV_INT32U len);
+void ScriptRecvInit(CDV_INT32U addr , CDV_INT32U len, CDV_INT08U port);
 void ScriptRecvDeinit(void);
-void ScriptRecvCtl(CDV_INT32U addr , CDV_INT32U len);
+void ScriptRecvCtl(CDV_INT32U addr , CDV_INT32U len, CDV_INT08U port);
 void ScriptCrcChk(CDV_INT32U addr , CDV_INT32U len, CDV_INT08U uartNo);
 void UsartTxQueueDoNext(void);
 void UsartTxAddWithLen(CDV_INT16U len);

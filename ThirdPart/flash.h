@@ -41,6 +41,7 @@
 void SPI_Flash_Read(u8* pBuffer,u32 ReadAddr,u16 NumByteToRead);   //¶ÁÈ¡flash
 void Org_Flash_Read(u8* pBuffer,u32 ReadAddr,u16 NumByteToRead)   ;
 void SPI_Flash_Write(u8* pBuffer,u32 WriteAddr,u16 NumByteToWrite);//Ð´Èëflash
+void Org_Flash_Write(u8* pBuffer,u32 WriteAddr,u16 NumByteToWrite);
 //void SPI_Flash_Erase_Chip(void);    	  //ÕûÆ¬²Á³ý
 void SPI_Flash_Erase_Sector(u32 Dst_Addr);//ÉÈÇø²Á³ý
 void SPI_Flash_Wait_Busy(void);           //µÈ´ý¿ÕÏÐ

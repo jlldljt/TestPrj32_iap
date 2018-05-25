@@ -49,18 +49,36 @@ void SetCdvTimeTick(u32 timeTick) {
 	cdvTimeTick = timeTick;
 }
 
-/*默认单次计数不超过0xFFFFFFFF*/
-u32 CalcTimeMS(u32 endTick , u32 startTick) {
-	u32 time = endTick >= startTick ? endTick - startTick : 0xFFFFFFFF - startTick + endTick; 
-	return (time * 1000 / OS_TICKS_PER_SEC);
-}
 
 u32 CalcCount(u32 endCount , u32 startCount) {
-	u32 count = endCount >= startCount ? endCount - startCount : 0xFFFFFFFF - startCount + endCount; 
+	u32 count = endCount >= startCount ? endCount - startCount : (u32)0xFFFFFFFF - startCount + endCount; 
 	return (count);
 }
 
-
+//ms
+void DelayMS(u32 num) {
+	u32 start;
+	start = GetCdvTimeTick();
+	while(CalcTimeMS(GetCdvTimeTick() , start) < num);
+}
+//TICK
+void DelayTick(u32 num) {
+	u32 start;
+	start = GetCdvTimeTick();
+	while(CalcCount(GetCdvTimeTick() , start) < num);
+}
+void TaskSched(void) {
+	delay_ms(1);
+}
+void TaskSched1(void) {
+	OS_ERR err;
+	OSSchedRoundRobinYield(&err);
+}
+/*默认单次计数不超过0xFFFFFFFF*/
+u32 CalcTimeMS(u32 endTick , u32 startTick) {
+	u32 time = endTick >= startTick ? endTick - startTick : (u32)0xFFFFFFFF - startTick + endTick; 
+	return (time * 1000 / OS_TICKS_PER_SEC);
+}
 void StartCdvTime(u8 no) {
 	if(no >= CDV_TIME_NUM)
 		return;
@@ -72,12 +90,6 @@ u32 EndCdvTime(u8 no) {
 		return 0;
 	cdvEndTime[no] = GetCdvTimeTick();
 	return CalcTimeMS(cdvEndTime[no] , cdvStartTime[no]);
-}
-
-void DelayTick(u32 num) {
-	u32 start;
-	start = GetCdvTimeTick();
-	while(CalcTimeMS(GetCdvTimeTick() , start) < num);
 }
 
 #endif
@@ -191,7 +203,7 @@ void delay_ms(u16 nms)
 	
 	if(OSRunning==OS_TRUE&&OSLockNesting==0)//如果os已经在跑了	   
 	{		  
-		OSTimeDlyHMSM(0,0,0,nms,OS_OPT_TIME_HMSM_STRICT,&err);   //延时
+		OSTimeDlyHMSM(0,0,0,nms,OS_OPT_TIME_HMSM_NON_STRICT,&err);   //延时
 //		if(nms>=fac_ms)//延时的时间大于ucos的最少时间周期 
 //		{
 //			#ifdef CPU_CFG_CRITICAL_METHOD

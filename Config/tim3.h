@@ -22,6 +22,8 @@
 
 #include "cdv_include.h"
 
+CDV_INT32S ReadClock1ms(void);
+CDV_INT32S ReadClock100ms(void);
 /*—” ±ms*/
 void TimeDelay(CDV_INT08U no, CDV_INT32U num) ;
 RET_STATUS TimeCmd(CDV_INT08U* rxBuf, CDV_INT08U rxLen, CDV_INT08U uartNo);

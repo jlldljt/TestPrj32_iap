@@ -41,16 +41,13 @@ void PeriphDriverInit(void)
   for(i = 0 ; i < CDV_O_NUM/* + CDV_EXO_NUM*2 */; i ++) {
 		OWrite(i , BIT_0);
 	}
-
+  LED_Init();
 	SPI_Configuration();
 	EXTI_Configuration();
 	USART_Configuration();
 	TIM3_Init(84, 10000);//10ms
-//	LED_Init();
-//	CdvInit();                                     //资源初始化
-	#ifdef __ENABLE_RTC
-		My_RTC_Init();
-	#endif
+
+	
 		
 	{
 		u8 in[3] = {0x00, 0X00, 0X00};

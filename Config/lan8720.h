@@ -32,7 +32,7 @@ extern ETH_DMADESCTypeDef  *DMATxDescToSet;			//DMA发送描述符追踪指针
 extern ETH_DMADESCTypeDef  *DMARxDescToGet; 		//DMA接收描述符追踪指针 
 extern ETH_DMA_Rx_Frame_infos *DMA_RX_FRAME_infos;	//DMA最后接收到的帧信息指针
  
-
+extern char isLinkUp;
 u8 LAN8720_Init(void);
 u8 LAN8720_Get_Speed(void);
 u8 ETH_MACDMA_Config(void);

@@ -28,6 +28,7 @@ ETH_DMADESCTypeDef *DMATxDscrTab = NULL;	//以太网DMA发送描述符数据结构体指针
 uint8_t *Rx_Buff = NULL; 					//以太网底层驱动接收buffers指针 
 uint8_t *Tx_Buff = NULL; 					//以太网底层驱动发送buffers指针
   
+char isLinkUp = 0;
 static void ETHERNET_NVICConfiguration(void);
 //LAN8720初始化
 //返回值:0,成功;
@@ -205,6 +206,7 @@ void ETH_IRQHandler(void)
 	if ( ETH_GetDMAFlagStatus(ETH_DMA_FLAG_R) == SET) 
 	{ 
 		//通知接收frame
+		//lwip_pkt_handle();		//接收frame
 	}
 	
 	ETH_DMAClearITPendingBit(ETH_DMA_IT_R); 	//清除DMA中断标志位
@@ -516,7 +518,7 @@ void ETH_BSP_Config(void)
 */
 void Eth_Link_query( void )
 {
-  static char isLinkUp = 0;
+  
 	/* Check the link */
   char link = (ETH_ReadPHYRegister(LAN8720_PHY_ADDRESS, PHY_BSR) & PHY_Linked_Status);
 	if(link && !isLinkUp)

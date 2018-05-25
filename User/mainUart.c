@@ -249,55 +249,42 @@ void CDVUsartSend(CDV_INT08U uartNo) {
 //不能使用addtx等，因如果workermanage先申请了锁，会导致死锁
   */
 
-RET_STATUS RecvParse(CDV_INT08U* rxBuf, CDV_INT08U rxLen, CDV_INT08U uartNo)
-{
+RET_STATUS RecvParse(CDV_INT08U* rxBuf, CDV_INT08U rxLen, CDV_INT08U uartNo) {
 	RET_STATUS ret = OPT_SUCCESS;
 	CDV_INT08U temp[2]={0,0};
-	/*CDV_INT16U crc;
+	CDV_INT16U crc;
 
 	crc = getCRC16(rxBuf,rxLen-2); 
 	temp[1] = crc & 0xff; 
 	temp[0] = (crc >> 8) & 0xff;
 	
-	if((rxBuf[rxLen-1] == temp[0])&&(rxBuf[rxLen-2] == temp[1])){//crc chk
-			if(0 == OnlineCmdCache(rxBuf , rxLen-2, uartNo)) {
-			//ChangeCdvStat(rxBuf , rxLen, uartNo);
-			ret = OPT_FAILURE;
-  	}
-	} else */if (rxBuf && rxLen){
+	if ((rxBuf[rxLen-1] == temp[0])&&(rxBuf[rxLen-2] == temp[1])) {//crc chk
+		
+    CentralizedControl_Ctrl(rxBuf, rxLen, uartNo);
+		
+	} else if (rxBuf && rxLen) {
 		
 		char* pos = strchr((char*)rxBuf,':') + 1;
 		int par = atoi(pos);
 		int slen = pos - (char*)rxBuf - 1;
 			
-		if(NULL == pos)
+		if (NULL == pos)
 			return OPT_FAILURE;
 		
-		if(0 == strncmp((CDV_INT08C*)rxBuf,"CDV INF",slen))//只能在UCOS线程还能调度的时候查询
-		{
-			//Log_Write("Get inf" , LOG_EVENT);
-			CDVInfoSend(uartNo);
+		if (0 == strncmp((CDV_INT08C*)rxBuf,"CDV INF",7)) {//只能在UCOS线程还能调度的时候查询
+			CDVInfoSend(uartNo);			
 			EthInfoSend(uartNo);
 		}
-		else if(0 == strncmp((CDV_INT08C*)rxBuf,"GET USART",slen)){
+		else if (0 == strncmp((CDV_INT08C*)rxBuf,"GET USART",9)) {
 			CDVUsartSend(uartNo);
 		}
-		else if(0 == strncmp((CDV_INT08C*)rxBuf,"CDV RESET",slen)){
+		else if (0 == strncmp((CDV_INT08C*)rxBuf,"CDV RESET",9)) {
 			ResetCdv();
-#ifdef __ENABLE_RTC
 		}
-		else if(0 == strncmp((CDV_INT08C*)rxBuf,"SETDATA",7)){//SETDATA:00 00 00
-			//RTC_Set_Time(0,0,0,RTC_H12_AM);	//设置时间
-		  RTC_Set_Date(atoi((CDV_INT08C*)rxBuf+8),atoi((CDV_INT08C*)rxBuf+11),atoi((CDV_INT08C*)rxBuf+14),1);		//设置日期
-		}
-		else if(0 == strncmp((CDV_INT08C*)rxBuf,"SETTIME",7)){//SETTIME:00 00 00
-			RTC_Set_Time(atoi((CDV_INT08C*)rxBuf+8),atoi((CDV_INT08C*)rxBuf+11),atoi((CDV_INT08C*)rxBuf+14),RTC_H12_AM);	//设置时间
-#endif
-		}
-		else if(0 == strncmp((CDV_INT08C*)rxBuf,"IAP",slen)){//IAP:1 1000
-			//IAP_RecvCtl(APPLICATION_ADDRESS, atoi((CDV_INT08C*)rxBuf + slen + 1));
+		else if (0 == strncmp((CDV_INT08C*)rxBuf,"IAP",3)) {//IAP:1 1000
 			Main_Menu(*(rxBuf + slen + 1), atoi((CDV_INT08C*)rxBuf + slen + 3), uartNo);
 		}
+		
 	}
 
 	return ret;
@@ -410,7 +397,7 @@ CDV_INT08U OnlineCmdCache(CDV_INT08U* rxBuf, CDV_INT16U rxLen, CDV_INT08U uartNo
 	}
 	
 	g_olCache.mark = 1;
-	OSTaskResume((OS_TCB*)&TaskParseTCB,&err);		
+	//OSTaskResume((OS_TCB*)&TaskParseTCB,&err);		
 	return 1;
 }
 /**
@@ -653,7 +640,7 @@ void AddTx(CDV_INT08U* txBuf, CDV_INT08U txLen, CDV_INT08U uartNo) {
   *
   * @note   g_scriptRecv
   */
-void ScriptRecvInit(CDV_INT32U addr , CDV_INT32U len) {
+void ScriptRecvInit(CDV_INT32U addr , CDV_INT32U len, CDV_INT08U port) {
 	CDV_INT08U i;
 	g_scriptRecv.doPos = 0;
 	//g_scriptRecv.no = 0;
@@ -661,6 +648,9 @@ void ScriptRecvInit(CDV_INT32U addr , CDV_INT32U len) {
 	g_scriptRecv.totalLen = len;
 	g_scriptRecv.tmpLen = 0;
 	g_scriptRecv.addr = addr;
+	g_scriptRecv.crc = 0xFFFF;
+	g_scriptRecv.err = 0;
+	g_scriptRecv.port = port;
 	
 //	for (i = 0; i < QUE_NUM; i++) {
 ////		DELETE(g_scriptRecv.buf[i]);
@@ -714,6 +704,8 @@ void ScriptRecvDeinit(void) {
 	g_scriptRecv.totalLen = 0;
 	g_scriptRecv.tmpLen = 0;
 	g_scriptRecv.addr = 0;
+	g_scriptRecv.crc = 0;
+	g_scriptRecv.port = 0;
 	g_cdvStat = CDV_ONLINE;
 	
 	for (i = 0; i < QUE_NUM; i++) {
@@ -733,13 +725,13 @@ void ScriptRecvDeinit(void) {
   *
   * @note   g_scriptRecv
   */
-void ScriptRecvCtl(CDV_INT32U addr , CDV_INT32U len) {
+void ScriptRecvCtl(CDV_INT32U addr , CDV_INT32U len, CDV_INT08U port) {
 	CDV_INT08U start = 0 ;
 	CDV_INT32U cnt = 1 ;
 	CDV_INT32U lastRxPos = 0;
 	if(0 == addr || 0 == len)
 		return;
-	ScriptRecvInit(addr , len);
+	ScriptRecvInit(addr , len,port);
 	
 	while(1) {//检测是否用户开启了FPGA程序下载到flash的拨码开关
 	  if(g_scriptRecv.tmpLen + g_scriptRecv.len[g_scriptRecv.doPos] >=  g_scriptRecv.totalLen) {//拨码开关拨到了停止下载FPGA程序的位置			

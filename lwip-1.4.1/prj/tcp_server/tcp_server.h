@@ -24,9 +24,10 @@
 #define TCP_SERVER_PORT			8088	//定义tcp server的端口
 #define LWIP_SEND_DATA			0x80	//定义有数据发送
 
+extern u8_t closeTcp;
 //extern u8* tcp_server_recvbuf;	//TCP服务器接收数据缓冲区
 //extern u8 tcp_server_flag;			//TCP服务器数据发送标志位
-
+void EthInfoSend(CDV_INT08U uartNo);
 u8 tcp_server_init(void);			//TCP服务器初始化(创建TCP服务器线程)
 RET_STATUS TCP_ServerSend(CDV_INT08U* pBuffer, CDV_INT16U NumByteToWrite);
 #endif

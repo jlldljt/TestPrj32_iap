@@ -30,12 +30,14 @@
 /* Private variables ---------------------------------------------------------*/
 typedef  void (*pFunction)(void);
 
+//extern u8 SerialNo ;
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
 void Main_Menu(u8 opt, u32 fileSize, u8 uartNo);
 void StartMenu(void);
+void CentralizedControl_Ctrl(uint8_t* buf, uint8_t len, uint8_t uartNo);
 
 #endif  /* __IAP_H */
 

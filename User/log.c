@@ -332,11 +332,6 @@ void Log_SendType(LOG_TYPE type, CMD_ARG *arg){
   * @note   
   */
 BOOL Log_Write(CDV_CHAR* buf, LOG_TYPE type){
-	//CDV_INT08U rn[2] = { '\r', '\n'};
-#ifdef __ENABLE_RTC
-	RTC_TimeTypeDef RTC_TimeStruct;
-	RTC_DateTypeDef RTC_DateStruct;
-#endif
   CDV_CHAR tmp[150]={0};
 	CDV_INT08U tmpL = 0;
 	CDV_INT08U len = strlen(buf);
@@ -351,14 +346,9 @@ BOOL Log_Write(CDV_CHAR* buf, LOG_TYPE type){
 	
 	if(len > 100)
 		return FALSE;
-#ifdef __ENABLE_RTC
-	RTC_GetTime(RTC_Format_BIN,&RTC_TimeStruct);
-	RTC_GetDate(RTC_Format_BIN, &RTC_DateStruct);
-	sprintf(tmp,"\r\n 20%02d-%02d-%02d %02d:%02d:%02d+%s+%s",RTC_DateStruct.RTC_Year,RTC_DateStruct.RTC_Month,RTC_DateStruct.RTC_Date
-	,RTC_TimeStruct.RTC_Hours,RTC_TimeStruct.RTC_Minutes,RTC_TimeStruct.RTC_Seconds, logType[type] , buf);
-#else
+
 	sprintf(tmp,"\r\n +%s+%s", logType[type] , buf);
-#endif
+
 	
 	tmpL = strlen(tmp);
 	
