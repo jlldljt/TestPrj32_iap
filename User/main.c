@@ -34,6 +34,7 @@ void cdv_refresh_task(void *p_arg);//任务函数
 
 
 int main(void){
+	CDV_INT08C fields[5] = "";
 	OS_ERR err;
 	CPU_SR_ALLOC();
 	delay_init(168);                               //时钟初始化
@@ -53,6 +54,14 @@ int main(void){
 	OSInit(&err);                                  //初始化 UCOSIII
 	INTX_ENABLE();                                 //开中断	
 	
+	// OTA检测
+	SPI_Flash_Read((CDV_INT08U*)fields, OTA_ADDR, 3);
+	
+	if(0 != strncmp(fields,"OTA",3))
+	  StartMenu();
+	
+	memset((void*)fields, 0, 3);
+	SPI_Flash_Write((CDV_INT08U*)fields, OTA_ADDR, 3);
 	
 #if USE_NPC_NET
   /* configure Ethernet (GPIOs, clocks, MAC, DMA) */ 
@@ -89,20 +98,11 @@ int main(void){
 //开始任务函数
 void start_task(void *p_arg){
 	CDV_INT08U i;
-	CDV_INT08C fields[3] = "";
 	//CDV_INT32U size;
 	OS_ERR err;
 	CPU_SR_ALLOC();//OS_CRITICAL_ENTER()
 	p_arg = p_arg;
 	CPU_Init();
-	
-	SPI_Flash_Read((CDV_INT08U*)fields, OTA_ADDR, 3);
-	
-	if(0 != strncmp(fields,"OTA",3))
-	  StartMenu();
-	
-	memset((void*)fields, 0, 3);
-	SPI_Flash_Write((CDV_INT08U*)fields, OTA_ADDR, 3);
 	
 	#if OS_CFG_STAT_TASK_EN > 0u
 	OSStatTaskCPUUsageInit(&err); //统计任务
