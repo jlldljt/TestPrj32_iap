@@ -404,6 +404,7 @@ void ETH_NVIC_Config(void)
   */
 static void ETH_MACDMA_Config1(void)
 { 
+	u32 timeout = 0;
   /* Enable ETHERNET clock  */
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_ETH_MAC | RCC_AHB1Periph_ETH_MAC_Tx |
                          RCC_AHB1Periph_ETH_MAC_Rx, ENABLE);
@@ -415,7 +416,13 @@ static void ETH_MACDMA_Config1(void)
   ETH_SoftwareReset();
 
   /* Wait for software reset */
-  while (ETH_GetSoftwareResetStatus() == SET);
+  //while (ETH_GetSoftwareResetStatus() == SET);
+	while (ETH_GetSoftwareResetStatus() == SET && timeout < (1 << 8)) {
+		timeout++;
+	};
+	
+	if(timeout >= (1 << 8))
+		ResetCdv();
 
   /* ETHERNET Configuration --------------------------------------------------*/
   /* Call ETH_StructInit if you don't like to configure all ETH_InitStructure parameter */

@@ -151,7 +151,7 @@ void assert(uint8_t* file, uint8_t* function, uint32_t line)
 	
 	g_cdvStat = CDV_ASSERT;
 	
-	sprintf(tmp , "assert occur! file:%s\r\nfunction:%s\r\nline:%d\r\n" 
+	sprintf(tmp , "iap assert occur! file:%s\r\nfunction:%s\r\nline:%d\r\n" 
 	,file 
 	,function
 	,line
