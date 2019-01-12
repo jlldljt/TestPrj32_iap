@@ -25,7 +25,9 @@
 void SPI_Configuration(void)
 {
 	SPI2_Configuration(SPI_BaudRatePrescaler_64);
+	#if _NPC_VERSION_ == 2u
 	SPI3_Configuration(SPI_BaudRatePrescaler_2);
+	#endif
 }
 //SPI1速度设置函数
 //SpeedSet:0~7

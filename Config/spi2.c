@@ -52,21 +52,22 @@ void SPI2_Configuration(uint16_t baudRatePrescaler)
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 	
+#if  USE_CASCADE == 1u
 	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_15;//主端级联片选
 	GPIO_Init(GPIOD, &GPIO_InitStructure);
-	
+#endif
 //	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_12;//FPGA1控制片选
 //	GPIO_Init(GPIOF, &GPIO_InitStructure);
 //	
 //	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_11;//FPGA2控制片选
 //	GPIO_Init(GPIOH, &GPIO_InitStructure);
-	
+#if _NPC_VERSION_ == 2u
 	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_8;//FPGA1控制片选
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
 	
 	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_3;//FPGA2控制片选
 	GPIO_Init(GPIOD, &GPIO_InitStructure);
-	
+#endif
 	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_0;//Flash片选
 	GPIO_Init(GPIOI, &GPIO_InitStructure);
 	

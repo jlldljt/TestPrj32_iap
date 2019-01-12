@@ -132,12 +132,28 @@ void CmdArgDelete(CMD_ARG *arg);
 /*定义CDV版本*/
 //#define CDV_V1 1
 #define CDV_V2_2
+#define NPC_V2_2	//2.2硬件
 #define VIRTUAL_LOGIC 1 //使用需逻辑资源
 
-#define _NPC_VERSION_ 3u//cdv 版本
+#define _NPC_VERSION_ 1u//cdv 版本
 
-//资源使用定义
+#if _NPC_VERSION_ == 1u
+
+//  #define ENABLE_PID 1u  // 比例阀pid调节
+		#if defined(CDV_V1)
+			#define MAIN_COM 1//MainUsart//
+		#else
+			#define MAIN_COM 2//MainUsart//
+		#endif
+#elif _NPC_VERSION_ == 2u
+
 #define USE_NPC_NET  1
+#define MAIN_COM 4
+#elif _NPC_VERSION_ == 3u
+#define USE_NPC_NET  1
+#define MAIN_COM 4
+#endif
+//资源使用定义
 
 /*串口波特率*/
 #define USART_SEND_GAP  20

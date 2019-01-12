@@ -36,6 +36,8 @@ u8 RomanNumerals[9][3] = {0x08, 0x08, 0x08, //¢ñ
 void PeriphDriverInit(void)
 {
 	u8 i, dat;
+	Dac1_Init();
+	Dac2_Init();
 	GPIO_Configuration();
 	IOInit();
   for(i = 0 ; i < CDV_O_NUM/* + CDV_EXO_NUM*2 */; i ++) {
@@ -43,7 +45,7 @@ void PeriphDriverInit(void)
 	}
   LED_Init();
 	SPI_Configuration();
-	EXTI_Configuration();
+	//EXTI_Configuration();
 	USART_Configuration();
 	TIM3_Init(84, 10000);//10ms
 

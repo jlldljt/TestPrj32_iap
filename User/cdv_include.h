@@ -42,6 +42,7 @@
 #include "iox.h"
 #include "tim3.h"
 #include "74HC595.h"
+#include "dac.h"
 /*thirdpart*/
 #include "delay.h"
 #include "sysdef.h"

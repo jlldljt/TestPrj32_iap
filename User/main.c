@@ -294,13 +294,13 @@ void cdv_refresh_task(void *p_arg){
 //用于联机状态下的串口收
 void tmr1_callback(void *p_tmr, void *p_arg) {
 		
-#if _NPC_VERSION_ > 1u
+//#if _NPC_VERSION_ > 1u
 #if USE_NPC_NET
   Eth_Link_query();
 //#else
 //	OS_TaskSuspend((OS_TCB*)&WorkerManageTaskTCB,&err);
 #endif
-#endif
+//#endif
 }
 
 

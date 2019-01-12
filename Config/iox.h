@@ -158,7 +158,17 @@ u32 Read_Output_ALL(void);
 
  #define LED_ON  0
  #define LED_OFF 1
-#if _NPC_VERSION_ == 2u
+#if _NPC_VERSION_ == 1u
+	#if defined(CDV_V1)
+		#define LED1 PDout(9)	  // LED1 运行指示
+		#define LED2 PDout(11)	// LED2	告警指示
+		#define LED3 PDout(13)	// LED3 故障指示
+		#else
+		#define LED1 PHout(12)	// LED1 运行指示
+		#define LED2 PBout(12)	// LED2	告警指示
+		#define LED3 PHout(11)	// LED3 故障指示
+	#endif
+#elif _NPC_VERSION_ == 2u
 	#define LED1 PGout(4)	//上板中间
 	#define LED2 PGout(4) //
 	#define LED3 PBout(6)	//下板 LED3 RED指示对应板子的LED1

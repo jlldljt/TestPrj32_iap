@@ -471,6 +471,8 @@ void StartMenu(void)
 					u8 out[3] = {0x31, 0X51, 0X57};
 					WriteToInLed(in, 3);
 					WriteToOutLed(out, 3);
+					LED3 = LED_ON;
+					LED1 = LED_OFF;
 				  }
 					DelayUS(1000000);
 					{
@@ -478,6 +480,8 @@ void StartMenu(void)
 					u8 out[3] = {0x00, 0X00, 0X00};
 					WriteToInLed(in, 3);
 					WriteToOutLed(out, 3);
+					LED3 = LED_OFF;
+					LED1 = LED_ON;
 					DelayUS(1000000);
 				  }
 				}

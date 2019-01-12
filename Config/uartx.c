@@ -28,7 +28,198 @@
 	#include "uart6.h"
 
 /*USART设置*/
+void USART_ConfigNull(u32 bound, u16 wordLength, u16 stopBits, u16 parity){
+	
+}
+//TODO 不能用null，用空函数
+void (*p_UartSet[])(u32 , u16 , u16 , u16) =
+{
+	
+#if _NPC_VERSION_ == 1u
+	USART1_Configuration,
+	USART2_Configuration,
+	USART3_Configuration,
+	UART4_Configuration,
+	UART5_Configuration,
+	USART_ConfigNull,
+#elif _NPC_VERSION_ == 2u
+	USART1_Configuration,
+	USART2_Configuration,
+	USART3_Configuration,
+	UART4_Configuration,
+	UART5_Configuration,
+	USART6_Configuration,
+#elif _NPC_VERSION_ == 3u
+	USART1_Configuration,
+	USART_ConfigNull,
+	USART_ConfigNull,
+	UART4_Configuration,
+	UART5_Configuration,
+	USART6_Configuration,
+#endif
+};
+/** @brief  校正串口配置到stm32专用配置
+  * @param  
+  * @retval OPT_FAILURE 参数不适配
+  * @note   此配置是stm32专用的，参考
+位数	奇偶检验	停止位
+ 7  	奇或偶  	0.5、1、1.5、2
+ 8  	无检验  	0.5、1、1.5、2
+ 8  	奇或偶  	1
+ 9  	无检验  	1
+UART4、UART5不支持0.5和1.5位的停止位
+  */
+RET_STATUS CorrectComParam(struct COM_PARAM* param, u8 uartNo)
+{ 
+	RET_STATUS ret = OPT_SUCCESS;
+	
+	ASSERT(param);
+	
+  if(!IS_USART_BAUDRATE(param->bound))
+	{
+		ret = OPT_FAILURE;
+	}
+	
+	#define EVEN_AND_ODD(PARITY) (((PARITY) == USART_Parity_Even) || \
+                                 ((PARITY) == USART_Parity_Odd))
+
+	switch (param->wordLength)
+	{
+		case 7:
+			param->wordLength = EVEN_AND_ODD(param->parity) ? USART_WordLength_8b : 0xFFFF;
+			break;
+		case 8:
+			param->wordLength = EVEN_AND_ODD(param->parity) ? USART_WordLength_9b : USART_WordLength_8b;
+			break;
+		case 9:
+			param->wordLength = EVEN_AND_ODD(param->parity) ? 0xFFFF : USART_WordLength_9b;
+			break;
+		default:
+			//ret = OPT_FAILURE;
+			break;
+	}
+	
+	switch (param->wordLength)
+	{
+		case USART_WordLength_8b:
+			
+			break;
+		case USART_WordLength_9b:
+			if (param->stopBits != USART_StopBits_1)
+			{
+				ret = OPT_FAILURE;
+			}
+			break;
+		default:
+			ret = OPT_FAILURE;
+			break;
+	}
+	
+	if (4 == uartNo || 5 == uartNo)
+	{
+		if (param->stopBits == USART_StopBits_0_5 
+			|| param->stopBits == USART_StopBits_1_5)
+		{
+			ret = OPT_FAILURE;
+		}
+	}
+	
+	return ret;
+}
+
+/** @brief  开发层串口查询
+  * @param  
+  * @retval OPT_FAILURE 参数不适配
+  * @note   
+  */
+RET_STATUS ReturnComParam(struct COM_PARAM* param, u8 uartNo)
+{ 
+	RET_STATUS ret = OPT_SUCCESS;
+	
+	ASSERT(param);
+	
+  if(!IS_USART_BAUDRATE(param->bound))
+	{
+		ret = OPT_FAILURE;
+	}
+	
+	#define EVEN_AND_ODD(PARITY) (((PARITY) == USART_Parity_Even) || \
+                                 ((PARITY) == USART_Parity_Odd))
+
+	switch (param->wordLength)
+	{
+		case USART_WordLength_8b:
+			param->wordLength = EVEN_AND_ODD(param->parity) ? 7 : 8;
+			break;
+		case USART_WordLength_9b:
+			if (param->stopBits != USART_StopBits_1)
+			{
+				ret = OPT_FAILURE;
+			}
+			param->wordLength = EVEN_AND_ODD(param->parity) ? 8 : 9;
+			break;
+		default:
+			ret = OPT_FAILURE;
+			break;
+	}
+	
+	if (4 == uartNo || 5 == uartNo)
+	{
+		if (param->stopBits == USART_StopBits_0_5 
+			|| param->stopBits == USART_StopBits_1_5)
+		{
+			ret = OPT_FAILURE;
+		}
+	}
+	
+	return ret;
+}
+
+//void USART_ConfigNull(u32 bound, u16 wordLength, u16 stopBits, u16 parity){
+//	
+//}
+//void (*p_UartSet[])(u32 , u16 , u16 , u16) =
+//{
+//#if _NPC_VERSION_ == 1u
+//	USART1_Configuration,
+//	USART2_Configuration,
+//	USART3_Configuration,
+//	UART4_Configuration,
+//	UART5_Configuration,
+//	USART_ConfigNull,
+//#elif _NPC_VERSION_ == 2u
+//	USART1_Configuration,
+//	USART2_Configuration,
+//	USART3_Configuration,
+//	UART4_Configuration,
+//	UART5_Configuration,
+//	USART6_Configuration,
+//#elif _NPC_VERSION_ == 3u
+//	USART1_Configuration,
+//	USART_ConfigNull,
+//	USART_ConfigNull,
+//	UART4_Configuration,
+//	UART5_Configuration,
+//	USART6_Configuration,
+//#endif
+//};
+
+
+/*USART设置*/
 void USART_Configuration(void){
+	int i = 0;
+	struct COM_PARAM comPar;
+	
+	for (i = 0; i < 6; i++)
+	{
+		Org_Flash_Read((CDV_INT08U *)&comPar, USART_SET_ADDR(i), sizeof(comPar));
+		if(p_UartSet[i]) {
+			if(OPT_SUCCESS == CorrectComParam(&comPar, i))
+				p_UartSet[i](comPar.bound, comPar.wordLength, comPar.stopBits, comPar.parity);
+			else
+				p_UartSet[i](115200, USART_WordLength_8b, USART_StopBits_1, USART_Parity_No);
+		}
+	}
 //  USART1_Configuration(115200, USART_WordLength_8b, USART_StopBits_1, USART_Parity_No);
 //	USART2_Configuration(115200, USART_WordLength_8b, USART_StopBits_1, USART_Parity_No);
 //	USART3_Configuration(115200, USART_WordLength_8b, USART_StopBits_1, USART_Parity_No);
@@ -37,21 +228,7 @@ void USART_Configuration(void){
 //	USART6_Configuration(115200, USART_WordLength_8b, USART_StopBits_1, USART_Parity_No);
 
 }
-void (*p_UartSet[])(u32 , u16 , u16 , u16) =
-{
-	USART1_Configuration,
-	
-#if _NPC_VERSION_ == 2u
-	USART2_Configuration,
-	USART3_Configuration,
-#elif _NPC_VERSION_ == 3u
-	NULL,
-	NULL,
-#endif
-	UART4_Configuration,
-	UART5_Configuration,
-	USART6_Configuration,
-};
+
 
 /**
   * @brief  串口设置主函数
@@ -74,20 +251,31 @@ void USARTSet(u32 bound, u16 wordLength, u16 stopBits, u16 parity, u8 no) {
 	p_UartSet[no-1](bound, wordLength, stopBits, parity);
 }
 
-
+void USART_SendNull(u8 *buf,u16 len){}
 void (*p_UartSend[])(u8* ,u16) =
 {
+#if _NPC_VERSION_ ==1u
 	USART1_Send,
-#if _NPC_VERSION_ == 2u
 	USART2_Send,
 	USART3_Send,
-#elif _NPC_VERSION_ == 3u
-	NULL,
-	NULL,
-#endif
+	UART4_Send,
+	UART5_Send,
+	USART_SendNull,
+#elif _NPC_VERSION_ == 2u
+	USART1_Send,
+	USART2_Send,
+	USART3_Send,
 	UART4_Send,
 	UART5_Send,
 	USART6_Send,
+#elif _NPC_VERSION_ == 3u
+	USART1_Send,
+	USART_SendNull,
+	USART_SendNull,
+	UART4_Send,
+	UART5_Send,
+	USART6_Send,
+#endif
 };
 
 	
@@ -108,19 +296,31 @@ void USARTSend(u8 *buf ,u16 len ,u8 no) {
 	
 }
 
+void USART_TRNull(u8 *txbuf,u16 txlen ,u8* rxbuf ,u8 rxbufLen,u8* rxlen){}
 void (*p_UartTR[])(u8 *,u16  ,u8*  ,u8 ,u8* ) =
 {
+#if _NPC_VERSION_ == 1u
 	USART1_TR,
-#if _NPC_VERSION_ == 2u
 	USART2_TR,
 	USART3_TR,
-#elif _NPC_VERSION_ == 3u
-	NULL,
-	NULL,
-#endif
+	UART4_TR,
+	UART5_TR,
+	USART_TRNull,
+#elif _NPC_VERSION_ == 2u
+	USART1_TR,
+	USART2_TR,
+	USART3_TR,
 	UART4_TR,
 	UART5_TR,
 	USART6_TR,
+#elif _NPC_VERSION_ == 3u
+	USART1_TR,
+	USART_TRNull,
+	USART_TRNull,
+	UART4_TR,
+	UART5_TR,
+	USART6_TR,
+#endif
 };
 
 	

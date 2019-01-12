@@ -1,6 +1,15 @@
 #include "74HC595.h"
 
-#if _NPC_VERSION_ == 2u
+#if _NPC_VERSION_ == 1u
+#define	IN_SI_H     
+#define IN_SI_L	    
+
+#define	IN_SCK_H     //数据输入时钟线，将当前si移位到寄存器->H->L
+#define	IN_SCK_L    
+
+#define	IN_RCK_H    //输出存储器锁存时钟线,改变输出数据->H->L
+#define	IN_RCK_L    
+#elif _NPC_VERSION_ == 2u
 #define	IN_SI_H     GPIO_SetBits(GPIOD,GPIO_Pin_12)     //数据线
 #define IN_SI_L	    GPIO_ResetBits(GPIOD,GPIO_Pin_12) 
 
@@ -23,7 +32,16 @@
 #define IN_SI_LED_ON   IN_SI_L
 #define IN_SI_LED_OFF  IN_SI_H
 
-#if _NPC_VERSION_ == 2u
+#if _NPC_VERSION_ == 1u
+#define	OUT_SI_H          //数据线
+#define OUT_SI_L	    
+
+#define	OUT_SCK_H    //数据输入时钟线，将当前si移位到寄存器->H->L
+#define	OUT_SCK_L    
+
+#define	OUT_RCK_H    //输出存储器锁存时钟线,改变输出数据->H->L
+#define	OUT_RCK_L    
+#elif _NPC_VERSION_ == 2u
 #define	OUT_SI_H     GPIO_SetBits(GPIOD,GPIO_Pin_13)     //数据线
 #define OUT_SI_L	    GPIO_ResetBits(GPIOD,GPIO_Pin_13) 
 

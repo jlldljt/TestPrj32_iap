@@ -23,7 +23,7 @@
 
 #include "cdv_include.h" 
 
-#define MAIN_COM 4
+
 /*用作FPGA下载时的定义*/
 #define FPGA_QUE_NUM 4
 #define FPGA_QUE_LEN 4096
