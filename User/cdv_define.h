@@ -135,7 +135,7 @@ void CmdArgDelete(CMD_ARG *arg);
 #define NPC_V2_2	//2.2硬件
 #define VIRTUAL_LOGIC 1 //使用需逻辑资源
 
-#define _NPC_VERSION_ 1u//cdv 版本
+#define _NPC_VERSION_ 2u//cdv 版本
 
 #if _NPC_VERSION_ == 1u
 
