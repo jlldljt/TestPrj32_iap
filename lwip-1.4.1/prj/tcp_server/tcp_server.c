@@ -26,6 +26,7 @@ u8* tcp_server_recvbuf = NULL;	//TCP客户端接收数据缓冲区
 
 u8 tcp_server_flag;								//TCP服务器数据发送标志位
 struct netconn *gConn = NULL;
+ip_addr_t g_ota_ipaddr = {0};
 
 //TCP服务器任务
 #define TCPSERVER_PRIO		5
@@ -111,7 +112,7 @@ void http_server_serve(struct netconn *conn)
   u16_t buflen;
   struct fs_file * file;
 	conn->recv_timeout = 1000;  	//禁止阻塞线程 等待1000ms
-	conn->send_timeout = 10;  	//禁止阻塞线程 等待10ms
+	conn->send_timeout = 100;  	//禁止阻塞线程 等待10ms
 	
 	gConn = conn;
 	tcp_server_recvbuf = UserMemPtr(CCM_TCP_SERVER);
@@ -227,8 +228,8 @@ void http_server_serve(struct netconn *conn)
 		{
 			switch(g_cdvStat){
 				case CDV_RECV:
-					if(g_scriptRecv.tmpLen == 0 && TCP_COM == g_olCache.uart)
-						g_scriptRecv.len[g_scriptRecv.rxPos] += 1;
+					//if(g_scriptRecv.tmpLen == 0 && TCP_COM == g_olCache.uart)
+					//	g_scriptRecv.len[g_scriptRecv.rxPos] += 1;
 					
 					break;
 			}
@@ -245,6 +246,9 @@ TCP_SERVER_DELETE:
 	//while((tcp_server_flag & LWIP_SEND_DATA) == LWIP_SEND_DATA);
 	gConn = NULL;
   tcp_server_recvbuf = NULL;
+	
+	while(g_cdvStat==CDV_RECV);//防止新连接
+	
 }
 
 /**
@@ -256,6 +260,7 @@ static void netconn_server_thread(void *arg)
 { 
   struct netconn *conn, *newconn;
   err_t err, accept_err;
+		ip_addr_t ipaddr;
   
   /* Create a new TCP connection handle */
   conn = netconn_new(NETCONN_TCP);
@@ -281,9 +286,11 @@ static void netconn_server_thread(void *arg)
         accept_err = netconn_accept(conn, &newconn);
         if(accept_err == ERR_OK)
         {
+					netconn_getaddr(newconn,&ipaddr,&port,0); //获取远端IP地址和端口号
+			    if(ipaddr.addr == g_ota_ipaddr.addr) {
           /* serve connection */
-          http_server_serve(newconn);
-
+            http_server_serve(newconn);
+          }
 					/* Close the connection (server closes in HTTP) */
           netconn_close(newconn);
   

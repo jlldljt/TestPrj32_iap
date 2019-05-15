@@ -279,6 +279,11 @@ RET_STATUS RecvParse(CDV_INT08U* rxBuf, CDV_INT08U rxLen, CDV_INT08U uartNo) {
 			CDVUsartSend(uartNo);
 		}
 		else if (0 == strncmp((CDV_INT08C*)rxBuf,"CDV RESET",9)) {
+			u8 in[3] = {0x00, 0X00, 0X00};
+			u8 out[3] = {0x01, 0X01, 0X7F};
+			WriteToInLed(in, 3);
+			WriteToOutLed(out, 3);
+			IAP_LoadApp(APPLICATION_ADDRESS);
 			ResetCdv();
 		}
 		else if (0 == strncmp((CDV_INT08C*)rxBuf,"IAP",3)) {//IAP:1 1000
@@ -519,6 +524,7 @@ void AddTxNoCrc(CDV_INT08U* txBuf, CDV_INT16U txLen, CDV_INT08U uartNo) {
   */
 void AddTx(CDV_INT08U* txBuf, CDV_INT08U txLen, CDV_INT08U uartNo) {
 	CDV_INT16U crc;
+	CDV_INT08U *buf = NULL;
 	
 	ASSERT(txBuf && txLen);
 	if(NULL == txBuf || 0 == txLen)
@@ -527,13 +533,20 @@ void AddTx(CDV_INT08U* txBuf, CDV_INT08U txLen, CDV_INT08U uartNo) {
 	crc = getCRC16(txBuf,txLen);
 	//crc_ccitt(txBuf,txLen,0xffff);
 	MODBUS_CRC16(txBuf,txLen, 0xFFFF);
+	
+	NEW08U(buf,txLen+2);
+	
+
+	memcpy(buf , txBuf , txLen);
+	memcpy(buf + txLen, &crc, 2);
+	
+	
 	if(0xEE == uartNo)
 	{
 		u32 clk;
 		clk = ReadClock100ms();
 	
-		while (OPT_FAILURE == TCP_ServerSend(txBuf, txLen));
-		while (OPT_FAILURE == TCP_ServerSend((CDV_INT08U*)&crc, 2));
+		while (OPT_FAILURE == TCP_ServerSend(buf,txLen+2));
 		
 		clk = CalcCount(ReadClock100ms(), clk);
 		clk = 0;
@@ -544,14 +557,40 @@ void AddTx(CDV_INT08U* txBuf, CDV_INT08U txLen, CDV_INT08U uartNo) {
 //	}
 	else if(MAIN_COM == uartNo) //main usart
 	{
-		while (OPT_FAILURE == MAINUSART_Send(txBuf, txLen));
-		while (OPT_FAILURE == MAINUSART_Send((CDV_INT08U*)&crc, 2));
+		while (OPT_FAILURE == MAINUSART_Send(buf,txLen+2));
 	}
 	else
 	{
-		USARTSend(txBuf, txLen, uartNo);
-		USARTSend((CDV_INT08U*)&crc, 2, uartNo);
+		USARTSend(buf,txLen+2, uartNo);
 	}
+	
+	DELETE(buf);
+//	if(0xEE == uartNo)
+//	{
+//		u32 clk;
+//		clk = ReadClock100ms();
+//	
+//		while (OPT_FAILURE == TCP_ServerSend(txBuf, txLen));
+//		while (OPT_FAILURE == TCP_ServerSend((CDV_INT08U*)&crc, 2));
+//		
+//		clk = CalcCount(ReadClock100ms(), clk);
+//		clk = 0;
+//	}	
+////	else if(0xFF == uartNo)
+////	{
+////		Cascade_Slave_Write(txBuf, txLen);
+////	}
+//	else if(MAIN_COM == uartNo) //main usart
+//	{
+//		while (OPT_FAILURE == MAINUSART_Send(txBuf, txLen));
+//		while (OPT_FAILURE == MAINUSART_Send((CDV_INT08U*)&crc, 2));
+//	}
+//	else
+//	{
+//		USARTSend(txBuf, txLen, uartNo);
+//		USARTSend((CDV_INT08U*)&crc, 2, uartNo);
+//	}
+	
 //	
 //	while(!USART_CAN_DO) {//这句是因为连续add显示变量会死机而添加的
 //		//OSTimeDlyHMSM(0,0,0,20,OS_OPT_TIME_HMSM_STRICT,&err); //延时

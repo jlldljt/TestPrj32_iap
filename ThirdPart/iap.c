@@ -36,6 +36,7 @@
 //#include "ymodem.h"
 u8 SerialNo = MAIN_COM;
 #define SerialPutString(str) AddTxNoCrc((u8*)str, strlen(str), SerialNo)
+#define SerialPutCh(str,len) AddTx((u8*)str, len, SerialNo)
 //#define USART_PRINT(str)
 #define USART_PRINT(str) USARTSend((u8*)str, strlen(str), MAIN_COM)
 
@@ -53,7 +54,7 @@ uint8_t tab_1024[1024] =
 //uint8_t FileName[FILE_NAME_LENGTH];
 
 /* Private function prototypes -----------------------------------------------*/
-
+void IAP_LoadApp(u32 appxaddr);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -155,11 +156,17 @@ u8 IAP_Flash_Write(u8* pBuffer,u32 WriteAddr,u16 NumByteToWrite)
 void IAP_RecvCtl(CDV_INT32U addr , CDV_INT32U len , CDV_INT08U port) {
 	CDV_INT08U start = 0 ;
 	CDV_INT32U cnt = 1 ;
+	CDV_INT32U cnt_timeout = 3000/*~1ms*/ * 10000;
 	CDV_INT32U lastRxPos = 0;
-	if(0 == addr || 0 == len)
+	u8 cmd[10] = {0xF3 , 0x06, 0x00, 0x00};
+	if(0 == addr || 0 == len) {
+		cmd[2] = 1;
+		SerialPutCh(cmd, 3);
 		return;
+	}
 	IAP_RecvInit(addr , len , port);
-	SerialPutString("\r\n接收初始化完成，准备接收");
+	//SerialPutString("\r\n接收初始化完成，准备接收");
+	SerialPutCh(cmd, 3);
 	while(!g_scriptRecv.err) {//检测是否用户开启了FPGA程序下载到flash的拨码开关
 	  if(g_scriptRecv.tmpLen + g_scriptRecv.len[g_scriptRecv.doPos] >=  g_scriptRecv.totalLen) {//拨码开关拨到了停止下载FPGA程序的位置			
 			if (0 != g_scriptRecv.len[g_scriptRecv.doPos]) {
@@ -188,6 +195,11 @@ void IAP_RecvCtl(CDV_INT32U addr , CDV_INT32U len , CDV_INT08U port) {
 		} else if( 0 == start){
 			if(0 !=g_scriptRecv.len[g_scriptRecv.rxPos]) {
 				start = 1;
+			} else {
+				if(cnt_timeout-- == 0) {
+					g_scriptRecv.err = 1;
+					break;
+				}
 			}
 		}
 	}
@@ -199,6 +211,14 @@ void IAP_RecvCtl(CDV_INT32U addr , CDV_INT32U len , CDV_INT08U port) {
 	
 	IAP_RecvDeinit();
 	
+	if(!g_scriptRecv.err) {
+		u8 in[3] = {0x00, 0X00, 0X00};
+			u8 out[3] = {0x01, 0X01, 0X7F};
+			WriteToInLed(in, 3);
+			WriteToOutLed(out, 3);
+			IAP_LoadApp(APPLICATION_ADDRESS);
+			ResetCdv();
+	}
 }
 
 
@@ -264,6 +284,10 @@ void IAP_LoadApp(u32 appxaddr)
 	 /* Test if user code is programmed starting from address "APPLICATION_ADDRESS" */
 	if (((*(__IO uint32_t*)APPLICATION_ADDRESS) & 0x2FFE0000 ) == 0x20000000)
 	{
+		CDV_INT08C fields[5] = "";
+		memset((void*)fields, 0, 3);
+	   SPI_Flash_Write((CDV_INT08U*)fields, OTA_ADDR, 3);
+		
 		/* Jump to user application */
 		JumpAddress = *(__IO uint32_t*) (APPLICATION_ADDRESS + 4);
 		Jump_To_Application = (pFunction) JumpAddress;
@@ -271,6 +295,10 @@ void IAP_LoadApp(u32 appxaddr)
 		__set_MSP(*(__IO uint32_t*) APPLICATION_ADDRESS);
 		__set_CONTROL(0);
 		Jump_To_Application();
+	}
+	else
+	{
+		
 	}
 }		 
 
@@ -387,7 +415,7 @@ void CentralizedControl_Ctrl(uint8_t* buf, uint8_t len, uint8_t uartNo)
     {
       
       SerialPutString("OK\r\n");
-    }else if (opt == 0x1)/* Download user application in the Flash */
+    }else if (opt == 0x06)/* Download user application in the Flash */
     {
       
       SerialDownload(fileSize, uartNo);
@@ -399,9 +427,20 @@ void CentralizedControl_Ctrl(uint8_t* buf, uint8_t len, uint8_t uartNo)
     }
     else if (opt == 0x3) /* execute the new program */
     {
+			u8 in[3] = {0x00, 0X00, 0X00};
+			u8 out[3] = {0x01, 0X01, 0X7F};
+			WriteToInLed(in, 3);
+			WriteToOutLed(out, 3);
 			IAP_LoadApp(APPLICATION_ADDRESS);
     }
-    else if ((opt == 0x4) && (FlashProtection == 1))/* Disable the write protection */
+    else if (opt == 0x4) /* query status */
+    {
+      if(buf[3] == 0x01) {
+				u8 ask[4] = {0xF3, 0X04, 0X00, 0X00};
+				SerialPutCh(ask, 4);
+			}
+    }
+    else if ((opt == 0x10) && (FlashProtection == 1))/* Disable the write protection */
     {
       
       switch (FLASH_If_DisableWriteProtection())

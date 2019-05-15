@@ -23,8 +23,9 @@
 #define TCP_SERVER_RX_BUFSIZE	2000	//定义tcp server最大接收数据长度
 #define TCP_SERVER_PORT			8088	//定义tcp server的端口
 #define LWIP_SEND_DATA			0x80	//定义有数据发送
-
+ #include "tcp.h"
 extern u8_t closeTcp;
+extern ip_addr_t g_ota_ipaddr;
 //extern u8* tcp_server_recvbuf;	//TCP服务器接收数据缓冲区
 //extern u8 tcp_server_flag;			//TCP服务器数据发送标志位
 void EthInfoSend(CDV_INT08U uartNo);

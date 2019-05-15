@@ -135,7 +135,7 @@ void CmdArgDelete(CMD_ARG *arg);
 #define NPC_V2_2	//2.2硬件
 #define VIRTUAL_LOGIC 1 //使用需逻辑资源
 
-#define _NPC_VERSION_ 2u//cdv 版本
+#define _NPC_VERSION_ 3u//cdv 版本
 
 #if _NPC_VERSION_ == 1u
 
@@ -169,6 +169,8 @@ void CmdArgDelete(CMD_ARG *arg);
 //#define SCRIP_MAX_DEBUG      11
 #define VERSION_ADDR         0x100
 #define OTA_ADDR             VERSION_ADDR + 1
+// OTA升级的IP地址
+#define OTA_IP               OTA_ADDR + 10
 
 
 #define WORKER_NUM           (SCRIP_MAX_RUN - 2)

@@ -56,12 +56,13 @@ int main(void){
 	
 	// OTA¼ì²â
 	SPI_Flash_Read((CDV_INT08U*)fields, OTA_ADDR, 3);
+	SPI_Flash_Read((CDV_INT08U*)(&g_ota_ipaddr.addr), OTA_IP, 4);
 	
 	if(0 != strncmp(fields,"OTA",3))
 	  StartMenu();
 	
-	memset((void*)fields, 0, 3);
-	SPI_Flash_Write((CDV_INT08U*)fields, OTA_ADDR, 3);
+//	memset((void*)fields, 0, 3);
+//	SPI_Flash_Write((CDV_INT08U*)fields, OTA_ADDR, 3);
 	
 #if USE_NPC_NET
   /* configure Ethernet (GPIOs, clocks, MAC, DMA) */ 
