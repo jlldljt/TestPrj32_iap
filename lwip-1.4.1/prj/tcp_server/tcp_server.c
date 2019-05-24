@@ -37,6 +37,8 @@ OS_TCB	TcpServerTaskTCB;
 //任务堆栈
 CPU_STK TCPSERVER_TASK_STK[TCPSERVER_STK_SIZE];
 
+#define SerialPutString(str) AddTxNoCrc((u8*)str, strlen(str), MAIN_COM)
+
 ////TCP服务器发送任务
 //#define SERVERSEND_PRIO		5
 ////任务堆栈大小
@@ -140,8 +142,11 @@ void http_server_serve(struct netconn *conn)
 		//处理接收
 		recv_err = netconn_recv(conn, &inbuf);
 		
+		SerialPutString("no recv\r\n");
+		
 		if (recv_err == ERR_OK)
 		{
+			SerialPutString("recv ok\r\n");
 			if (netconn_err(conn) == ERR_OK) 
 			{
 				netbuf_data(inbuf, (void**)&buf, &buflen);

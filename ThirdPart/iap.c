@@ -420,7 +420,7 @@ void CentralizedControl_Ctrl(uint8_t* buf, uint8_t len, uint8_t uartNo)
       
       SerialDownload(fileSize, uartNo);
     }
-    else if (opt == 0x2)/* Upload user application from the Flash */
+    else if (opt == 0x11)/* Upload user application from the Flash */
     {
       
       SerialUpload();
@@ -438,6 +438,11 @@ void CentralizedControl_Ctrl(uint8_t* buf, uint8_t len, uint8_t uartNo)
       if(buf[3] == 0x01) {
 				u8 ask[4] = {0xF3, 0X04, 0X00, 0X00};
 				SerialPutCh(ask, 4);
+			}else{
+				u8 ask[4] = {0xF3, 0X04, 0X00, 0X00};
+				SerialPutCh(ask, 4);
+				delay_ms(500);
+				ResetCdv();
 			}
     }
     else if ((opt == 0x10) && (FlashProtection == 1))/* Disable the write protection */
