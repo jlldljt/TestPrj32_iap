@@ -118,7 +118,7 @@ void http_server_serve(struct netconn *conn)
 	
 	gConn = conn;
 	tcp_server_recvbuf = UserMemPtr(CCM_TCP_SERVER);
-	
+	SerialPutString("connected\r\n");
   /* Read the data from the port, blocking if nothing yet there. 
    We assume the request (the part we care about) is in one netbuf */
 	while(isLinkUp)
@@ -142,11 +142,11 @@ void http_server_serve(struct netconn *conn)
 		//处理接收
 		recv_err = netconn_recv(conn, &inbuf);
 		
-		SerialPutString("no recv\r\n");
+		//SerialPutString("no recv\r\n");
 		
 		if (recv_err == ERR_OK)
 		{
-			SerialPutString("recv ok\r\n");
+			//SerialPutString("recv ok\r\n");
 			if (netconn_err(conn) == ERR_OK) 
 			{
 				netbuf_data(inbuf, (void**)&buf, &buflen);
@@ -208,7 +208,7 @@ void http_server_serve(struct netconn *conn)
 							lenlenlen= 0;
 							//CDV_INT16U crc;
 							//crc = getCRC16((u8*)tcp_server_recvbuf,data_len-2); 
-							
+							AddTxNoCrc((CDV_INT08U*)tcp_server_recvbuf, data_len, MAIN_COM);
 							//if((tcp_server_recvbuf[data_len-1] == ((crc >> 8) & 0xff))&&(tcp_server_recvbuf[data_len-2] == (crc & 0xff))){//crc chk
 							if(0 == OnlineCmdCache((u8*)tcp_server_recvbuf , data_len, TCP_COM)) {
 								;
@@ -285,13 +285,20 @@ static void netconn_server_thread(void *arg)
       /* Put the connection into LISTEN state */
       netconn_listen(conn);
   
+	{
+		char tmp[50]={0};
+		sprintf(tmp , "等待远程ip:%d.%d.%d.%d升级bin\r\n" 
+		,(g_ota_ipaddr.addr)&0xff,(g_ota_ipaddr.addr>>8)&0xff,(g_ota_ipaddr.addr>>16)&0xff,(g_ota_ipaddr.addr>>24)&0xff
+		);
+		AddTxNoCrc((CDV_INT08U*)tmp, strlen(tmp), MAIN_COM);
+	}
       while(1) 
       {
         /* accept any icoming connection */
         accept_err = netconn_accept(conn, &newconn);
         if(accept_err == ERR_OK)
         {
-					netconn_getaddr(newconn,&ipaddr,&port,0); //获取远端IP地址和端口号
+					netconn_getaddr(newconn,&ipaddr,&port,0); //获取远端IP地址和端口号。、、可以吧port绑定到一个固定的port，比如30000
 			    if(ipaddr.addr == g_ota_ipaddr.addr) {
           /* serve connection */
             http_server_serve(newconn);

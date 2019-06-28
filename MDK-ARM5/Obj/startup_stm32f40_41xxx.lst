@@ -868,11 +868,11 @@ ARM Macro Assembler    Page 14
               00001000 
               00009000 
               00000000 
-Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
-erwork --depend=.\obj\startup_stm32f40_41xxx.d -o.\obj\startup_stm32f40_41xxx.o
- -ID:\Keil\ARM\RV31\INC -ID:\Keil\ARM\CMSIS\Include -ID:\Keil\ARM\INC\ST\STM32F
-4xx --predefine="__UVISION_VERSION SETA 525" --list=.\obj\startup_stm32f40_41xx
-x.lst ..\STM32F4xx_StdPeriph_Templates\startup_stm32f40_41xxx.s
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4 --apcs=interw
+ork --depend=.\obj\startup_stm32f40_41xxx.d -o.\obj\startup_stm32f40_41xxx.o -I
+C:\Keil_v5\ARM\RV31\INC -IC:\Keil_v5\ARM\CMSIS\Include -IC:\Keil_v5\ARM\INC\ST\
+STM32F4xx --predefine="__UVISION_VERSION SETA 525" --list=.\obj\startup_stm32f4
+0_41xxx.lst ..\STM32F4xx_StdPeriph_Templates\startup_stm32f40_41xxx.s
 
 
 
@@ -2327,4 +2327,4 @@ xx.s
       None
 Comment: __use_two_region_memory unused
 3 symbols
-447 symbols in table
+446 symbols in table
